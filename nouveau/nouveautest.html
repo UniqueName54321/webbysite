@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Do you have NouveauBrowser?</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #101116;
+      color: #f5f5f7;
+    }
+
+    main {
+      width: 100%;
+      max-width: 540px;
+      text-align: center;
+    }
+
+    .logo {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: #e7e0ff;
+      color: #28203e;
+      font-size: 42px;
+      font-weight: 750;
+    }
+
+    h1 {
+      font-size: clamp(30px, 6vw, 42px);
+      letter-spacing: -1.5px;
+      margin: 0 0 16px;
+    }
+
+    .description {
+      color: #a8a9b7;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .result {
+      padding: 28px;
+      background: #1b1c24;
+      border: 1px solid #353640;
+      border-radius: 18px;
+      margin-bottom: 24px;
+    }
+
+    .result.success {
+      border-color: #478f6e;
+    }
+
+    .result.failure {
+      border-color: #a76c6c;
+    }
+
+    .status-icon {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+
+    .result h2 {
+      font-size: 22px;
+      margin: 0 0 12px;
+    }
+
+    .result p {
+      color: #b3b3bf;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    button {
+      appearance: none;
+      padding: 13px 26px;
+      border: none;
+      border-radius: 10px;
+      background: #e7e0ff;
+      color: #28203e;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #cbbdf9;
+    }
+
+    button:focus-visible {
+      outline: 3px solid #a99cf5;
+      outline-offset: 3px;
+    }
+
+    footer {
+      margin-top: 36px;
+      color: #777888;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <div class="logo" aria-hidden="true">N</div>
+
+    <h1>Do you have NouveauBrowser?</h1>
+
+    <p class="description">
+      NouveauBrowser is an experimental web browser
+      designed to give users greater control over
+      what websites and extensions can do.
+
+      Let's see whether your browser supports
+      Nouveau features!
+    </p>
+
+    <section id="result" class="result" aria-live="polite">
+      <div id="status-icon" class="status-icon">…</div>
+
+      <h2 id="status-title">Checking your browser...</h2>
+
+      <p id="status-description">
+        Looking for the NouveauBrowser API.
+        Please make sure JavaScript is enabled.
+      </p>
+    </section>
+
+    <button id="check-again" type="button">
+      Check again
+    </button>
+
+    <footer>
+      Detection checks for the NouveauBrowser API,
+      not your browser's name or user-agent string.
+
+      <p>
+        The Nouveau Project
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    function hasNouveau() {
+      try {
+        return (
+          Array.isArray(window.nouveau?.features) &&
+          window.nouveau.features.includes("browser-detection")
+        );
+      } catch {
+        return false;
+      }
+    }
+
+    function checkBrowser() {
+      const result = document.getElementById("result");
+      const icon = document.getElementById("status-icon");
+      const title = document.getElementById("status-title");
+      const description = document.getElementById("status-description");
+
+      if (hasNouveau()) {
+        result.className = "result success";
+        icon.textContent = "✓";
+        title.textContent = "Yes! NouveauBrowser detected.";
+
+        description.textContent =
+          "Your browser exposes the NouveauBrowser " +
+          "detection API. You're ready to explore " +
+          "Nouveau-enabled websites!";
+      } else {
+        result.className = "result failure";
+        icon.textContent = "✕";
+        title.textContent = "NouveauBrowser not detected.";
+
+        description.textContent =
+          "Your current browser doesn't appear to " +
+          "support the NouveauBrowser API. " +
+          "You can still browse ordinary websites, " +
+          "but Nouveau-specific features may not work.";
+      }
+    }
+
+    document
+      .getElementById("check-again")
+      .addEventListener("click", checkBrowser);
+
+    checkBrowser();
+  </script>
+</body>
+</html>
