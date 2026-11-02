@@ -560,6 +560,23 @@
       historyIndex = history.length;
       print(`C:\\beepOS> ${raw}`, true);
       const [command, ...args] = raw.toLowerCase().split(/\s+/);
+      // Match text only. These eggs never execute commands or change stored data.
+      const prank = raw.toLowerCase().replace(/^sudo\s+/, "");
+      let roast = null;
+      if (/^rm\b/.test(prank)) roast = "rm: permission denied by the Department of Keeping My Crap.\nYou brought a flamethrower to a website. Sit down.";
+      else if (/^mkfs(?:\.\w+)?\b/.test(prank)) roast = "mkfs: found 0 disks and 1 questionable decision.\nTry formatting your priorities.";
+      else if (/^dd\b/.test(prank)) roast = "dd: 0 bytes copied, 1 disaster averted.\nThe disk is imaginary. Your confidence is concerning.";
+      else if (/^chmod\b.*\b777\b/.test(prank)) roast = "chmod: absolutely not.\nYou cannot give the entire internet a spare key to my house.";
+      else if (/^(?:shutdown|reboot|poweroff|halt)\b/.test(prank)) roast = "Power management says no.\nYou may close the tab like a normal person.";
+      else if (/^:\(\)\s*\{/.test(prank)) roast = "Fork bomb detected.\nThis is a toaster, not an all-you-can-fork buffet.";
+      else if (/^(?:curl|wget)\b.*\|\s*(?:sudo\s+)?(?:ba)?sh\b/.test(prank)) roast = "Download mystery script, pipe directly into regret?\nBold strategy. The imaginary security department has eaten the pipe.";
+      else if (/^(?:kill|killall|pkill)\b/.test(prank)) roast = "No processes were harmed in the making of this tantrum.\nThe only thing getting terminated is your villain arc.";
+      else if (/^(?:>|cat\b.*>|echo\b.*>)\s*\/dev\/sd/.test(prank)) roast = "That disk does not exist.\nYou are threatening a drawing of a computer.";
+      if (roast) {
+        print(roast);
+        win.body.scrollTop = win.body.scrollHeight;
+        return;
+      }
       switch (command) {
         case "help": print("help          you are here\nls / dir      list your files\nopen <app>    open an app (try 'open quotes')\nbeep          do the thing\ndate          check the time\nwhoami        a person on the internet\necho <text>   say something into the void\nclear / cls   tidy up\nexit          close the prompt"); break;
         case "ls": case "dir": print("welcome    quotes    inactive    nouveau\ncomputer   note      settings    about"); break;
