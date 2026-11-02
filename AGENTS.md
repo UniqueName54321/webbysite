@@ -17,8 +17,12 @@ The website is primarily static HTML, CSS and JavaScript. It is hosted on Cloudf
 - Stage only files related to the task.
 - Create a Git commit with a descriptive message after completing a successful task.
 - Never use force pushes, destructive resets, or history rewrites without explicit permission.
-- Do not push to GitHub unless explicitly instructed to deploy or publish.
-- When instructed to deploy, push the current branch to its configured upstream.
+- After successfully completing and checking a task, commit
+  the relevant changes and push them to the current branch's
+  configured upstream.
+- Treat a successful push to the production branch as a
+  deployment trigger.
+- Report the commit hash and whether the push succeeded.
 - If authentication prevents pushing, report the issue. GitHub Desktop can handle the push instead.
 
 ## Deployment
