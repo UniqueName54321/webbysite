@@ -23,11 +23,11 @@ Every existing HTML page continues to load `style.css`. It imports 98.css first,
 
 Checkboxes and radio buttons follow the upstream `input + label` structure, with explicit IDs and `for` attributes. Test the visible labels and keyboard interactions; the native inputs are visually hidden by 98.css.
 
-The existing manager still owns dragging, resizing, focus, minimization, closing, the taskbar and app loading. Applications and all existing HTML routes remain in their original files. On narrow viewports, the existing single-active-window layout remains; shared control-size tokens increase touch targets without introducing a second control design.
+The existing manager still owns dragging, resizing, focus, minimization, closing, the taskbar and app loading. Disk-backed text files register safe generated app IDs and reuse this manager; they never execute their contents. Applications and all existing HTML routes remain in their original files. On narrow viewports, the existing single-active-window layout remains; shared control-size tokens increase touch targets without introducing a second control design.
 
 ## App layouts
 
-- **My Computer:** compact, left-aligned file pane; no hero, introductory copy or card tiles. File/View/Window/Help menus and the Explorer-only address bar sit above it; the status bar reports object count or selection. Single click selects, double click or Enter opens, and arrows/Home/End move selection. On touch screens, a tap opens. File > Open and View > Large Icons / Small Icons reuse the same application routing and icon sheet.
+- **My Computer:** compact, left-aligned file pane; no hero, introductory copy or card tiles. File/View/Window/Help menus, the Back/Up/New toolbar and the editable Explorer-only address bar sit above it; the status bar reports object count or selection. Single click selects, double click or Enter opens, and arrows/Home/End move selection. On touch screens, a tap opens. File > Open and View > Large Icons / Small Icons reuse the same application routing and icon sheet.
 - **Welcome:** silver system dialog with a 32px icon, compact heading and real 98.css fieldsets for files and contact groups. All existing links and account details remain available.
 - **Documents:** white text panes with modest headings and system menus. Quotes uses monospace document text. Account writing remains intact and scrolls inside its pane.
 - **Utilities:** settings, diagnostics and About use silver dialog surfaces and native fields/group boxes. Yellow note paper and the black terminal are content surfaces. These apps do not show a browser address bar.
@@ -41,8 +41,20 @@ The desktop handles `contextmenu` only outside `.os-window`. Background clicks g
 
 The context popup reuses the shared menu styles, fits within the viewport, supports Shift+F10 / the context-menu key, arrow navigation and Escape, and dismisses on outside pointer actions, resize or blur. Properties uses the existing window manager and shows shortcut metadata without inventing disk sizes or modification dates.
 
+## Virtual disk and boot
+
+`filesystem.js` owns schema version 1 in IndexedDB database `beepOS-filesystem`, object store `disk`, key `C`. It seeds only a missing disk and validates existing data before use. Built-in folders/shortcuts/text are locked against rename/edit; user folders and text can be created and renamed. All desktop app shortcuts live under `C:\beepOS\my stuff`; static HTML routes remain valid. Stored user names/content are rendered with DOM text/value APIs, never as executable markup.
+
+All writes run in read/write transactions against the latest stored disk. BroadcastChannel and focus refresh keep tabs current; an editor checks its previous saved text before overwriting a changed file. Failed writes do not commit or clear the editor draft. Existing localStorage note/preferences remain separate and untouched. Inaccessible or invalid storage uses a clearly labelled temporary session and never resets existing data. There is no implicit formatting/reset command.
+
+The boot screen is shown during module loading and disk initialization, with an indeterminate 98.css progress bar and reduced-motion support. It does not add a fake minimum delay. The desktop stays inert until the initial app is ready. Boot errors offer Retry rather than silently wiping storage.
+
+The disk is limited to 2048 entries and 256 Ki UTF-16 code units per text file. Names follow case-insensitive Windows-style collision/reserved-name rules. Root/system anchors and parent relationships are validated, including cycle detection. Future disk schema versions require explicit migration; do not reseed over an existing disk.
+
 ## Browser checks
 
 `tests/browser.cjs` uses Playwright and a separately running local HTTP server. It covers content/links, app loading, all window actions, Nouveau detection, notes/preferences, keyboard controls, offline/error handling, no-JavaScript pages and layouts at 320, 390, 640, 768, 1024 and 1440px. It also checks shared window frames, upstream control glyphs, font loading, Explorer selection/opening/views/keyboard/touch, and reachable icons at 800×480, 1280×720 and 1920×1080.
 
 Screenshots are written to the system temporary directory under `beepos-screenshots`, including desktop, mobile, Explorer, documents and display settings. Override `BEEPOS_SCREENSHOTS` to save elsewhere. Inspect these images after changing the visual system.
+
+`tests/filesystem.browser.cjs` adds boot, persistence/reload, hierarchy, new/rename/edit, invalid names, quota failures, stale saves, cross-tab concurrency, read-only seeds, prompt commands, mobile layouts, unavailable storage and damaged-disk recovery checks. It captures the boot screen, disk root, editor and mobile Explorer.

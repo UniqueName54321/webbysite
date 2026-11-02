@@ -32,11 +32,12 @@
   let lastFindError = -1;
   let propertiesTarget = "home";
   const apps = {
+    'file-dialog': { name: "New / Rename", label: "New / Rename", icon: "folder", path: "system\\files.exe", width: 350, height: 230, status: "choose a name" },
     properties: { name: "Properties", label: "Properties", icon: "settings", path: "system\\properties.exe", width: 360, height: 290, status: "desktop shortcut properties" },
     find: { name: "Find", label: "Find", icon: "offline", path: "system\\find.exe", width: 380, height: 210, status: "search failed successfully" },
     readme: { name: "README.md", label: "README.md", icon: "quotes", file: "desktop/README.md", path: "desktop\\README.md", width: 600, height: 460, status: "README.md · read-only · deliberately unhelpful" },
     home: { name: "welcome.exe", label: "Welcome", icon: "computer", file: "index.html", path: "welcome.exe", width: 640, height: 512, status: "welcome to your little corner of the internet" },
-    computer: { name: "My computer", label: "My computer", icon: "folder", path: "my stuff", width: 540, height: 340, status: "6 items · all your stuff, in one place" },
+    computer: { name: "My computer", label: "My computer", icon: "folder", path: "my stuff", width: 580, height: 390, status: "C: virtual disk" },
     quotes: { name: "quotes.txt", label: "Quotes & jokes", icon: "quotes", file: "quotes.html", path: "my stuff\\quotes.txt", width: 600, height: 390, status: "3 entries · read-only · unfortunately" },
     inactive: { name: "account graveyard", label: "Account graveyard", icon: "archive", file: "inactive.html", path: "my stuff\\account graveyard", width: 660, height: 550, status: "inactive, potentially inactive & formerly inactive" },
     nouveau: { name: "NouveauBrowser checker", label: "Nouveau checker", icon: "globe", file: "nouveau/nouveautest.html", path: "utilities\\nouveau.exe", width: 480, height: 450, status: "browser diagnostics · The Nouveau Project" },
@@ -48,6 +49,9 @@
   };
   const initialApp = apps[source.dataset.app] ? source.dataset.app : "home";
   const templates = new Map([[initialApp, { html: source.innerHTML, className: source.className }]]);
+  let filesystem;
+  let fileRequest;
+  const editorFiles = new Map();
   const windows = new Map();
   const loading = new Map();
   let topLayer = 10;
@@ -314,6 +318,9 @@
   }
 
   function closeWindow(win) {
+    if (win.saving) { notify("Please wait for the save to finish."); return; }
+    if (win.dirty && !window.confirm("This file has unsaved changes. Discard them and close?")) return;
+    win.unsubscribe?.();
     win.observer?.disconnect();
     win.element.remove();
     win.task.remove();
@@ -357,7 +364,7 @@
   function appMenuBar(id) {
     const menu = (label, content) => `<details class="app-menu"><summary>${label}</summary><div class="menu-popup">${content}</div></details>`;
     return `<nav class="window-toolbar" aria-label="${apps[id].name} menu bar">${
-      menu("File", `${id === "computer" ? '<button type="button" data-explorer="open" disabled>Open</button><hr>' : ''}<button type="button" data-open="computer">My Computer</button><button type="button" data-action="close">Close</button>`) +
+      menu("File", `${editorFiles.has(id) ? '<button type="button" data-fs="save">Save</button><hr>' : ''}${id === "computer" ? '<button type="button" data-explorer="open" disabled>Open</button><button type="button" data-fs="text">New Text File</button><button type="button" data-fs="folder">New Folder</button><button type="button" data-fs="rename" disabled>Rename</button><hr>' : ''}<button type="button" data-open="computer">My Computer</button><button type="button" data-action="close">Close</button>`) +
       menu("View", `${id === "computer" ? '<button type="button" data-explorer="large" aria-pressed="true">Large Icons</button><button type="button" data-explorer="small" aria-pressed="false">Small Icons</button><hr>' : ''}<button type="button" data-action="maximize">Maximize / Restore</button>`) +
       menu("Window", '<button type="button" data-action="minimize">Minimize</button><button type="button" data-action="show-desktop">Show Desktop</button>') +
       menu("Help", '<button type="button" data-open="about">About beepOS</button>')
@@ -390,56 +397,170 @@
     }
   }
 
-  function initExplorer(win) {
-    const grid = win.body.querySelector(".app-grid");
-    const files = [...grid.querySelectorAll(".app-file")];
-    const openButton = win.element.querySelector('[data-explorer="open"]');
-    let selected = null;
-    const select = (file) => {
-      selected = file;
-      for (const item of files) {
-        item.classList.toggle("is-selected", item === file);
-        item.setAttribute("aria-selected", String(item === file));
-        item.tabIndex = item === file || (!file && item === files[0]) ? 0 : -1;
-      }
-      openButton.disabled = !file;
-      win.element.querySelector(".window-status span").textContent = file
-        ? `${apps[file.dataset.open].name} · 1 object selected`
-        : `${files.length} objects`;
+  async function openDiskEntry(id) {
+    const entry = filesystem.node(id);
+    if (!entry) return;
+    if (entry.type === 'app') return openApp(entry.app);
+    if (entry.type === 'folder') {
+      await openApp('computer');
+      const win = windows.get('computer');
+      if (win) { focusWindow(win); win.navigate(id); }
+      return;
+    }
+    const appId = `file-${id}`;
+    editorFiles.set(appId, id);
+    apps[appId] = { name: entry.name, label: entry.name, icon: 'quotes', path: filesystem.path(id), width: 600, height: 430, status: entry.locked ? 'Read-only' : 'Text document' };
+    openApp(appId);
+  }
+
+  function requestFileChange(mode, type = 'text', nodeId = null) {
+    const pending = windows.get('file-dialog');
+    if (pending?.saving) { focusWindow(pending, true); notify('Please wait for the disk operation to finish.'); return; }
+    const explorer = windows.get('computer');
+    fileRequest = { mode, type, parent: explorer.folder, nodeId };
+    openApp('file-dialog');
+  }
+
+  function initFileDialog(win) {
+    const form = win.body.querySelector('form');
+    const input = form.querySelector('input');
+    const error = form.querySelector('[role="alert"]');
+    const request = { ...fileRequest };
+    form.querySelector('label').textContent = request.mode === 'rename' ? 'New name:' : request.type === 'folder' ? 'Folder name:' : 'File name:';
+    input.value = request.mode === 'rename' ? filesystem.node(request.nodeId).name : request.type === 'folder' ? 'New Folder' : 'New Text Document.txt';
+    error.textContent = '';
+    form.onsubmit = async event => {
+      event.preventDefault(); error.textContent = '';
+      const button = form.querySelector('[type="submit"]'); button.disabled = true; win.saving = true;
+      try {
+        if (request.mode === 'rename') await filesystem.rename(request.nodeId, input.value);
+        else await filesystem.create(request.parent, input.value, request.type);
+        win.saving = false;
+        if (windows.get(win.id) === win) closeWindow(win);
+      } catch (failure) { error.textContent = failure.message; }
+      finally { win.saving = false; button.disabled = false; }
     };
-    for (const file of files) {
-      file.setAttribute("role", "option");
-      file.addEventListener("click", (event) => {
-        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-        event.preventDefault(); select(file);
-        if (event.pointerType === "touch") openApp(file.dataset.open);
-      });
-      file.addEventListener("dblclick", (event) => { event.preventDefault(); openApp(file.dataset.open); });
-      file.addEventListener("keydown", (event) => {
-        const index = files.indexOf(file);
-        const columns = getComputedStyle(grid).gridTemplateColumns.split(" ").length;
-        const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns };
-        if (Object.hasOwn(offsets, event.key) || ["Home", "End"].includes(event.key)) {
-          event.preventDefault();
-          const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? files.length - 1 : Math.max(0, Math.min(files.length - 1, index + offsets[event.key]));
-          select(files[nextIndex]); files[nextIndex].focus();
-        } else if (event.key === "Enter") { event.preventDefault(); openApp(file.dataset.open); }
-        else if (event.key === " ") { event.preventDefault(); select(file); }
-      });
-    }
-    win.body.addEventListener("click", (event) => { if (!event.target.closest(".app-file")) select(null); });
-    for (const button of win.element.querySelectorAll("[data-explorer]")) {
-      button.addEventListener("click", () => {
-        if (button.dataset.explorer === "open") { if (selected) openApp(selected.dataset.open); }
-        else {
-          const small = button.dataset.explorer === "small";
-          grid.classList.toggle("small-icons", small);
-          win.element.querySelector('[data-explorer="large"]').setAttribute("aria-pressed", String(!small));
-          win.element.querySelector('[data-explorer="small"]').setAttribute("aria-pressed", String(small));
-        }
-      });
-    }
-    select(null);
+    // Wait until the ordinary app focus handling has completed.
+    requestAnimationFrame(() => { if (activeId === win.id) { input.focus(); input.select(); } });
+  }
+
+  function initFileEditor(win) {
+    const id = editorFiles.get(win.id);
+    const entry = filesystem.node(id);
+    const input = win.body.querySelector('textarea');
+    const saveButtons = [...win.element.querySelectorAll('[data-fs="save"]')];
+    input.value = entry.content; input.readOnly = entry.locked;
+    input.setAttribute('aria-label', entry.name);
+    const setStatus = message => { win.element.querySelector('.window-status span').textContent = message; };
+    const dirty = value => { win.dirty = value; for (const button of saveButtons) button.disabled = entry.locked || !value; };
+    dirty(false);
+    input.addEventListener('input', () => { dirty(input.value !== win.savedText); setStatus(win.dirty ? 'Unsaved changes' : entry.locked ? 'Read-only' : 'No unsaved changes'); });
+    win.savedText = input.value;
+    const save = async () => {
+      if (entry.locked || !win.dirty || win.saving) return;
+      const content = input.value; win.saving = true; setStatus('Saving…');
+      try {
+        await filesystem.write(id, content, win.savedText);
+        win.savedText = content; dirty(input.value !== content);
+        setStatus(win.dirty ? 'Unsaved changes' : filesystem.persistent ? 'Saved to C:' : 'Saved for this session only');
+      } catch (error) { setStatus('Not saved — ' + error.message); notify(error.message); }
+      finally { win.saving = false; }
+    };
+    for (const button of saveButtons) button.addEventListener('click', save);
+    input.addEventListener('keydown', event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); save(); } });
+    setStatus(entry.locked ? 'Read-only system file' : 'No unsaved changes');
+  }
+
+  function initExplorer(win) {
+    const grid = win.body.querySelector('.app-grid');
+    const openButton = win.element.querySelector('[data-explorer="open"]');
+    const renameButton = win.element.querySelector('[data-fs="rename"]');
+    const address = win.element.querySelector('.disk-address');
+    const back = win.element.querySelector('[data-fs="back"]');
+    const up = win.element.querySelector('[data-fs="up"]');
+    const history = [];
+    let selected = null;
+    win.folder = 'stuff';
+    const status = message => { win.element.querySelector('.window-status span').textContent = message; };
+    const select = id => {
+      selected = id;
+      const files = [...grid.children];
+      for (const file of files) {
+        file.classList.toggle('is-selected', file.dataset.node === id);
+        file.setAttribute('aria-selected', String(file.dataset.node === id));
+        file.tabIndex = file.dataset.node === id || (!id && file === files[0]) ? 0 : -1;
+      }
+      const entry = filesystem.node(id);
+      openButton.disabled = !entry; renameButton.disabled = !entry || entry.locked;
+      status(entry ? `${entry.name} · 1 object selected` : `${files.length} objects`);
+    };
+    const render = () => {
+      grid.replaceChildren();
+      const entries = filesystem.list(win.folder);
+      for (const entry of entries) {
+        let file;
+        if (entry.type === 'app') {
+          const holder = document.createElement('div'); holder.innerHTML = appLink(entry.app, 'app-file'); file = holder.firstElementChild;
+        } else { file = document.createElement('button'); file.type = 'button'; file.className = 'app-file'; file.innerHTML = icon(entry.type === 'folder' ? 'folder' : 'quotes') + '<span></span>'; }
+        file.querySelector('span').textContent = entry.name;
+        file.dataset.node = entry.id; file.setAttribute('role', 'option');
+        grid.append(file);
+      }
+      address.value = filesystem.path(win.folder);
+      up.disabled = win.folder === 'root'; back.disabled = history.length === 0;
+      win.body.querySelector('.disk-notice').textContent = filesystem.warning || 'Files are stored in this browser on this device.';
+      select(entries.some(n => n.id === selected) ? selected : null);
+    };
+    win.navigate = (id, remember = true) => {
+      if (filesystem.node(id)?.type !== 'folder') return;
+      if (remember && id !== win.folder) history.push(win.folder);
+      win.folder = id; selected = null; render();
+      grid.querySelector('.app-file')?.focus({ preventScroll: true });
+    };
+    const open = id => openDiskEntry(id);
+    grid.addEventListener('click', event => {
+      const file = event.target.closest('.app-file');
+      if (!file) { select(null); return; }
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault(); select(file.dataset.node);
+      if (event.pointerType === 'touch') open(selected);
+    });
+    grid.addEventListener('dblclick', event => { const file = event.target.closest('.app-file'); if (file) { event.preventDefault(); open(file.dataset.node); } });
+    grid.addEventListener('keydown', event => {
+      const file = event.target.closest('.app-file'); if (!file) return;
+      const files = [...grid.children]; const index = files.indexOf(file);
+      const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+      const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns };
+      if (Object.hasOwn(offsets, event.key) || ['Home', 'End'].includes(event.key)) {
+        event.preventDefault();
+        const i = event.key === 'Home' ? 0 : event.key === 'End' ? files.length - 1 : Math.max(0, Math.min(files.length - 1, index + offsets[event.key]));
+        select(files[i].dataset.node); files[i].focus();
+      } else if (event.key === 'Enter') { event.preventDefault(); open(file.dataset.node); }
+      else if (event.key === ' ') { event.preventDefault(); select(file.dataset.node); }
+    });
+    win.body.addEventListener('click', event => { if (!event.target.closest('.app-file')) select(null); });
+    for (const button of win.element.querySelectorAll('[data-explorer]')) button.addEventListener('click', () => {
+      if (button.dataset.explorer === 'open') { if (selected) open(selected); }
+      else {
+        const small = button.dataset.explorer === 'small'; grid.classList.toggle('small-icons', small);
+        win.element.querySelector('[data-explorer="large"]').setAttribute('aria-pressed', String(!small));
+        win.element.querySelector('[data-explorer="small"]').setAttribute('aria-pressed', String(small));
+      }
+    });
+    for (const button of win.element.querySelectorAll('[data-fs]')) button.addEventListener('click', () => {
+      const action = button.dataset.fs;
+      if (action === 'up') win.navigate(filesystem.node(win.folder).parent);
+      if (action === 'back' && history.length) win.navigate(history.pop(), false);
+      if (action === 'folder' || action === 'text') requestFileChange('create', action);
+      if (action === 'rename' && selected && !filesystem.node(selected).locked) requestFileChange('rename', null, selected);
+    });
+    win.element.querySelector('.address-bar').addEventListener('submit', event => {
+      event.preventDefault(); const id = filesystem.resolve(address.value, win.folder);
+      if (id && filesystem.node(id).type === 'folder') win.navigate(id);
+      else { notify('Folder not found. Even Find would struggle with that one.'); address.value = filesystem.path(win.folder); }
+    });
+    win.unsubscribe = filesystem.subscribe(render);
+    render();
   }
 
   function makeWindow(id, focus) {
@@ -465,8 +586,8 @@
           <button class="window-control close" type="button" data-action="close" aria-label="Close ${app.name}" title="Close window"></button>
         </div>
       </header>
-      ${!["note", "find", "properties"].includes(id) ? appMenuBar(id) : ""}
-      ${id === "computer" ? `<div class="address-bar"><span>Address</span><div class="address">${icon(app.icon)}C:\\beepOS\\${app.path}</div></div>` : ""}
+      ${!["note", "find", "properties", "file-dialog"].includes(id) ? appMenuBar(id) : ""}
+      ${id === "computer" ? `<div class="explorer-tools"><button type="button" data-fs="back">Back</button><button type="button" data-fs="up">Up</button><button type="button" data-fs="folder">New Folder</button><button type="button" data-fs="text">New File</button></div><form class="address-bar"><label for="disk-address">Address</label><input id="disk-address" class="disk-address" type="text" spellcheck="false" autocomplete="off"><button type="submit">Go</button></form>` : ""}
       <div class="window-body" tabindex="-1"><div class="app-content"><p>opening file…</p></div></div>
       ${id !== "note" ? `<footer class="window-status"><span>${app.status}</span><span>beep8.xyz</span></footer>` : ""}`;
 
@@ -560,19 +681,22 @@
   }
 
   function builtInContent(id) {
+    if (editorFiles.has(id)) return { className: "app-content file-editor", html: '<div class="editor-tools"><button type="button" data-fs="save">Save</button><span>Ctrl+S to save</span></div><textarea spellcheck="false" maxlength="262144"></textarea>' };
     switch (id) {
+      case "file-dialog":
+        return { className: "app-content file-dialog-content", html: '<form><label for="new-file-name">Name:</label><input id="new-file-name" name="filename" type="text" maxlength="120" required autocomplete="off"><p role="alert"></p><button type="submit">OK</button> <button type="button" data-action="close">Cancel</button></form>' };
       case "properties":
-        return { className: "app-content properties-content", html: `${icon("settings")}<h1 id="properties-name"></h1><dl class="about-specs"><div><dt>Type</dt><dd id="properties-type"></dd></div><div><dt>Location</dt><dd>Desktop</dd></div><div><dt>Target</dt><dd id="properties-target"></dd></div></dl><button class="retro-button" type="button" data-action="close">OK</button>` };
+        return { className: "app-content properties-content", html: `${icon("settings")}<h1 id="properties-name"></h1><dl class="about-specs"><div><dt>Type</dt><dd id="properties-type"></dd></div><div><dt>Location</dt><dd id="properties-location">Desktop</dd></div><div><dt>Target</dt><dd id="properties-target"></dd></div></dl><button class="retro-button" type="button" data-action="close">OK</button>` };
       case "find":
         return { className: "app-content error-content", html: `${icon("offline", "error-icon")}<p id="find-message"></p><button class="retro-button" type="button" data-action="close">OK</button>` };
       case "computer":
-        return { className: "app-content computer-content", html: `<div class="app-grid" role="listbox" aria-label="Files in My Computer">${["home", "quotes", "inactive", "nouveau", "terminal", "note"].map((appId) => appLink(appId, "app-file")).join("")}</div>` };
+        return { className: "app-content computer-content", html: '<p class="disk-notice" role="status"></p><div class="app-grid" role="listbox" aria-label="Files in My Computer"></div>' };
       case "note":
         return { className: "app-content note-content", html: `<div class="note-kicker"><span>NOTE TO SELF</span><span>001</span></div><label for="sticky-note" class="sr-only">Your sticky note</label><textarea id="sticky-note" maxlength="2000" spellcheck="false"></textarea><p class="note-save" role="status">editable · saves on this computer</p>` };
       case "settings":
         return { className: "app-content settings-content", html: `<p class="eyebrow">make it yours</p><h1>Display properties<span class="accent">.</span></h1><p>same little OS. different little mood.</p><fieldset><legend>Desktop colour</legend><div class="theme-options">${Object.entries(themes).map(([id, colors]) => `<div class="theme-option"><span class="theme-swatch" style="background:${colors[0]}">${icon("computer")}</span><div class="field-row"><input id="theme-${id}" type="radio" name="desktop-theme" value="${id}" ${theme === id ? "checked" : ""}><label for="theme-${id}">${id}</label></div></div>`).join("")}</div></fieldset><fieldset><legend>The little details</legend><div class="field-row setting-check"><input id="wallpaper-dots" type="checkbox" name="wallpaper-dots" ${plainWallpaper ? "" : "checked"}><label for="wallpaper-dots">Dotted wallpaper</label></div><div class="field-row setting-check"><input id="desktop-sound" type="checkbox" name="desktop-sound" ${soundEnabled ? "checked" : ""}><label for="desktop-sound">Tiny computer noises</label></div></fieldset><p class="settings-note">Changes apply immediately and stay on this browser.<br>No restart required. What a concept.</p>` };
       case "about":
-        return { className: "app-content about-content", html: `${icon("beep")}<p class="eyebrow">welcome to your very personal computer</p><h1>beepOS</h1><p>an operating system for my corner of the internet.<br>just a page for me and my crap, with more windows.</p><dl class="about-specs"><div><dt>Version</dt><dd>1.0 / personal edition</dd></div><div><dt>System requirements</dt><dd>a browser &amp; curiosity</dd></div><div><dt>Available storage</dt><dd>enough for my crap</dd></div><div><dt>Powered by</dt><dd>HTML, CSS &amp; JavaScript</dd></div></dl><p>Inspired by the wonderfully weird web desktops of<br><a href="https://www.windows93.net/">Windows 93</a> &amp; <a href="https://windows96.net/">Windows 96</a>.</p><button class="retro-button" type="button" data-action="beep">beep!</button>` };
+        return { className: "app-content about-content", html: `${icon("beep")}<p class="eyebrow">welcome to your very personal computer</p><h1>beepOS</h1><p>an operating system for my corner of the internet.<br>just a page for me and my crap, with more windows.</p><dl class="about-specs"><div><dt>Version</dt><dd>1.0 / final release</dd></div><div><dt>System requirements</dt><dd>a browser &amp; curiosity</dd></div><div><dt>Available storage</dt><dd>enough for my crap</dd></div><div><dt>Powered by</dt><dd>HTML, CSS &amp; JavaScript</dd></div></dl><p>Inspired by the wonderfully weird web desktops of<br><a href="https://www.windows93.net/">Windows 93</a> &amp; <a href="https://windows96.net/">Windows 96</a>.</p><button class="retro-button" type="button" data-action="beep">beep!</button>` };
       case "terminal":
         return { className: "app-content terminal-content", html: `<p>beepOS [version 1.0]\n(c) beep8.xyz. all beeps reserved.</p><p class="terminal-dim">Type 'help' for a list of commands.\nThis is a toy terminal. Go on, poke it.</p><div class="terminal-output" role="log" aria-label="Command output" aria-live="polite"></div><form autocomplete="off"><label for="terminal-command">C:\\beepOS&gt;</label><input id="terminal-command" name="command" aria-label="Terminal command" spellcheck="false" autocapitalize="off" maxlength="200"></form>` };
       default: return null;
@@ -594,11 +718,14 @@
 
   function initContent(win) {
     const root = win.body;
+    if (win.id === "file-dialog") initFileDialog(win);
+    if (editorFiles.has(win.id)) initFileEditor(win);
     if (win.id === "properties") {
       const app = apps[propertiesTarget];
       root.querySelector("#properties-name").textContent = app.label;
       root.querySelector("#properties-type").textContent = app.file ? "Document shortcut" : "Application shortcut";
-      root.querySelector("#properties-target").textContent = app.file || `C:\\beepOS\\${app.path}`;
+      root.querySelector("#properties-location").textContent = filesystem.path("stuff");
+      root.querySelector("#properties-target").textContent = filesystem.path(`app-${propertiesTarget}`);
       root.querySelector("svg use").setAttribute("href", `${asset("assets/icons.svg")}#${app.icon}`);
       win.element.setAttribute("role", "dialog");
     }
@@ -628,7 +755,7 @@
   async function openApp(id, { focus = true, initial = false } = {}) {
     if (!Object.hasOwn(apps, id)) return;
     closeStart();
-    if (windows.has(id)) { if (["find", "properties"].includes(id)) initContent(windows.get(id)); focusWindow(windows.get(id), !initial); return; }
+    if (windows.has(id)) { if (["find", "properties", "file-dialog"].includes(id)) initContent(windows.get(id)); focusWindow(windows.get(id), !initial); return; }
     const win = makeWindow(id, focus);
     try {
       const content = builtInContent(id) || await loadTemplate(id);
@@ -655,6 +782,10 @@
     const output = win.body.querySelector(".terminal-output");
     const history = [];
     let historyIndex = 0;
+    let cwd = 'stuff';
+    const argument = raw => raw.replace(/^\S+\s*/, '').replace(/^"(.*)"$/, '$1');
+    const updatePrompt = () => { form.querySelector('label').textContent = filesystem.path(cwd) + '>'; };
+    updatePrompt();
     const print = (message, dim = false) => {
       const p = document.createElement("p");
       p.textContent = message;
@@ -663,14 +794,14 @@
       // Keep a long terminal session from growing forever.
       while (output.childElementCount > 150) output.firstElementChild.remove();
     };
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const raw = input.value.trim();
       if (!raw) return;
       input.value = "";
       history.push(raw);
       historyIndex = history.length;
-      print(`C:\\beepOS> ${raw}`, true);
+      print(`${filesystem.path(cwd)}> ${raw}`, true);
       const [command, ...args] = raw.toLowerCase().split(/\s+/);
       // Match text only. These eggs never execute commands or change stored data.
       const prank = raw.toLowerCase().replace(/^sudo\s+/, "");
@@ -689,14 +820,46 @@
         win.body.scrollTop = win.body.scrollHeight;
         return;
       }
+      input.disabled = true;
+      try {
       switch (command) {
-        case "help": print("help          you are here\nls / dir      list your files\nopen <app>    open an app (try 'open quotes')\nbeep          do the thing\ndate          check the time\nwhoami        meet the person behind beepOS\necho <text>   say something into the void\nclear / cls   tidy up\nexit          close the prompt"); break;
-        case "ls": case "dir": print("welcome    quotes    inactive    nouveau\ncomputer   note      settings    about\nreadme     find"); break;
+        case "help": print("help          you are here\nls / dir      list your files\nopen <app>    open an app or file (try 'open quotes')\ncd <folder>   change directory (.. goes up)\npwd           show your location\nmkdir <name>  create a folder\ntouch <name>  create a text file\ncat <file>    read a text file\nbeep          do the thing\ndate          check the time\nwhoami        meet the person behind beepOS\necho <text>   say something into the void\nclear / cls   tidy up\nexit          close the prompt"); break;
+        case "ls": case "dir": {
+          const id = argument(raw) ? filesystem.resolve(argument(raw), cwd) : cwd;
+          if (!id || filesystem.node(id).type !== 'folder') print('Folder not found.');
+          else print(filesystem.list(id).map(n => `${n.type === 'folder' ? '[DIR] ' : '      '}${n.name}`).join('\n') || '(empty folder. suspiciously tidy.)');
+          break;
+        }
+        case "pwd": print(filesystem.path(cwd)); break;
+        case "cd": {
+          const id = argument(raw) ? filesystem.resolve(argument(raw), cwd) : 'stuff';
+          if (!id || filesystem.node(id).type !== 'folder') print('Folder not found.');
+          else { cwd = id; updatePrompt(); }
+          break;
+        }
+        case "mkdir": case "touch": {
+          const value = argument(raw).replaceAll('/', '\\');
+          const split = value.lastIndexOf('\\');
+          const parent = split < 0 ? cwd : filesystem.resolve(value.slice(0, split + 1), cwd);
+          const name = value.slice(split + 1);
+          await filesystem.create(parent, name, command === 'mkdir' ? 'folder' : 'text');
+          print(filesystem.persistent ? 'Created on C:.' : 'Created for this session only.');
+          break;
+        }
+        case "cat": {
+          const entry = filesystem.node(filesystem.resolve(argument(raw), cwd));
+          print(entry?.type === 'text' ? entry.content || '(empty file)' : 'Not a text file. Try open for application shortcuts.');
+          break;
+        }
         case "open": {
           const aliases = { welcome: "home", "quotes.txt": "quotes", accounts: "inactive", display: "settings", "readme.md": "readme" };
-          const id = aliases[args[0]] || args[0];
-          if (id && Object.hasOwn(apps, id) && id !== "notfound") { print(`Opening ${apps[id].name}…`); openApp(id); }
-          else print("File not found. Try 'ls' to see what's here.");
+          const id = args.length === 1 ? aliases[args[0]] || args[0] : null;
+          if (id && Object.hasOwn(apps, id) && !["notfound", "file-dialog"].includes(id)) { print(`Opening ${apps[id].name}…`); openApp(id); }
+          else {
+            const nodeId = filesystem.resolve(argument(raw), cwd);
+            if (nodeId) openDiskEntry(nodeId);
+            else print("File not found. Try 'ls' to see what's here.");
+          }
           break;
         }
         case "beep": print(beep(true) ? "beep! :3" : "beep! (audio isn't available in this browser)"); break;
@@ -708,6 +871,8 @@
         case "sudo": print("nice try. you are already the administrator of this nonsense."); break;
         default: print(`Unknown command: ${command}. Type 'help' for a list.`);
       }
+      } catch (error) { print(error.message); }
+      finally { input.disabled = false; if (activeId === win.id) input.focus({ preventScroll: true }); }
       win.body.scrollTop = win.body.scrollHeight;
     });
     input.addEventListener("keydown", (event) => {
@@ -793,7 +958,41 @@
   });
   window.addEventListener("resize", () => { for (const win of windows.values()) constrainWindow(win); });
 
-  // No fake boot delay: the content is ready as soon as the desktop is.
-  if (initialApp === "home" && window.innerWidth > 1100) openApp("note", { focus: false, initial: true });
-  openApp(initialApp, { initial: true });
+  window.addEventListener('beforeunload', event => {
+    if ([...windows.values()].some(win => win.dirty || win.saving)) { event.preventDefault(); event.returnValue = ''; }
+  });
+  window.addEventListener('focus', () => filesystem?.refresh().catch(() => {}));
+  async function boot() {
+    const screen = document.createElement('section');
+    screen.className = 'boot-screen'; screen.setAttribute('aria-label', 'Starting beepOS');
+    screen.innerHTML = `${pixelLogo()}<h1>beepOS 1.0</h1><p>PERSONAL EDITION · FINAL RELEASE</p><p role="status">Mounting C: and checking the cupboards…</p><div class="progress-indicator segmented" role="progressbar" aria-label="Loading virtual disk"><span class="progress-indicator-bar"></span></div>`;
+    document.body.append(screen); desktop.inert = true; taskbar.inert = true;
+    try {
+      const { createFilesystem } = await import(asset('filesystem.js'));
+      filesystem = await createFilesystem(apps);
+      filesystem.subscribe(() => {
+        for (const [appId, nodeId] of editorFiles) {
+          const entry = filesystem.node(nodeId); if (!entry) continue;
+          apps[appId].name = apps[appId].label = entry.name;
+          apps[appId].path = filesystem.path(nodeId);
+          const win = windows.get(appId);
+          if (win) {
+            win.element.querySelector('.window-title').textContent = entry.name;
+            win.task.querySelector('span').textContent = entry.name;
+            win.task.setAttribute('aria-label', `Switch to ${entry.name}`);
+            win.body.querySelector('textarea')?.setAttribute('aria-label', entry.name);
+          }
+        }
+      });
+      screen.querySelector('[role="status"]').textContent = 'Disk ready. Starting desktop…';
+      if (initialApp === "home" && window.innerWidth > 1100) openApp("note", { focus: false, initial: true });
+      await openApp(initialApp, { initial: true });
+      screen.remove(); desktop.inert = false; taskbar.inert = false;
+      if (filesystem.warning) notify(filesystem.warning);
+    } catch {
+      screen.querySelector('[role="status"]').textContent = 'Could not load the virtual disk. Your stored files have not been reset.';
+      const retry = document.createElement('button'); retry.textContent = 'Retry boot'; retry.onclick = () => location.reload(); screen.append(retry);
+    }
+  }
+  boot();
 })();

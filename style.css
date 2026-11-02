@@ -340,3 +340,31 @@ body > .app-content { max-width: 680px; margin: var(--space-4) auto; box-shadow:
 .properties-content h1 { font: var(--font-heading); margin: 0 0 var(--space-3); }
 .properties-content .about-specs { padding-top: var(--space-3); }
 @media print { .desktop-context-menu { display: none; } }
+
+/* Virtual disk chrome and editor use the same 98.css controls as other apps. */
+.explorer-tools { display: flex; gap: 4px; padding: 2px; flex-shrink: 0; flex-wrap: wrap; }
+.explorer-tools button { min-width: 40px; padding: 3px 8px; }
+.address-bar { margin: 0; }
+.address-bar label { flex-shrink: 0; }
+.disk-address { flex: 1; width: 0; min-width: 0; height: 23px; }
+.address-bar button { min-width: 32px; padding: 2px 6px; }
+.disk-notice { margin: 0 0 8px; color: var(--muted); font: var(--font-ui); }
+.file-dialog-content { min-height: 100%; background: var(--chrome); }
+.file-dialog-content input { display: block; width: 100%; margin-top: 8px; }
+.file-dialog-content [role="alert"] { color: #800000; min-height: 16px; margin: 8px 0; overflow-wrap: anywhere; }
+.file-editor { display: flex; flex-direction: column; min-height: 100%; height: 100%; padding: 0; }
+.editor-tools { display: flex; align-items: center; gap: 8px; padding: 4px; background: var(--chrome); }
+.file-editor textarea { flex: 1; min-height: 60px; width: 100%; resize: none; border: 0; box-shadow: none; padding: 8px; font: var(--font-code); color: var(--ink); }
+.file-editor textarea[readonly] { color: var(--ink); }
+.boot-screen { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--desktop-dark); color: white; text-align: center; }
+.boot-screen .brand-pixels { width: min(350px, 80vw); height: auto; color: #b1ce92; }
+.boot-screen h1 { font: bold 22px/1.5 var(--sans); margin: 24px 0 0; }
+.boot-screen p { max-width: 450px; margin: 8px 0; font: var(--font-ui); }
+.boot-screen .progress-indicator { width: min(320px, 80vw); height: 20px; margin-top: 16px; background: var(--chrome); }
+.boot-screen .progress-indicator-bar { width: 100%; }
+@media (max-width: 640px) { .explorer-tools button { min-height: 28px; } }
+@media (prefers-reduced-motion: no-preference) {
+  .boot-screen .progress-indicator { overflow: hidden; }
+  .boot-screen .progress-indicator-bar { width: 45%; animation: disk-start 1.1s steps(12) infinite; }
+  @keyframes disk-start { from { transform: translateX(-110%); } to { transform: translateX(230%); } }
+}
