@@ -19,7 +19,20 @@
     }
   };
 
+  const findErrors = [
+    "If you're looking for something, it's always in the last place you look.",
+    "This program doesn't work. But, at least it's better than Windows search.",
+    "Search complete: found the audacity. Still looking for your file.",
+    "The thing you want is somewhere very safe. Unfortunately, nobody knows where.",
+    "Have you checked the pocket of the trousers you wore yesterday?",
+    "Error 404: motivation to search not found.",
+    "Your file is in another castle. Probably in a folder called 'final_FINAL_v3'.",
+    "We searched everywhere except the place it actually is. You're welcome."
+  ];
+  let lastFindError = -1;
   const apps = {
+    find: { name: "Find", label: "Find", icon: "offline", path: "system\\find.exe", width: 380, height: 210, status: "search failed successfully" },
+    readme: { name: "README.md", label: "README.md", icon: "quotes", file: "desktop/README.md", path: "desktop\\README.md", width: 600, height: 460, status: "README.md · read-only · deliberately unhelpful" },
     home: { name: "welcome.exe", label: "Welcome", icon: "computer", file: "index.html", path: "welcome.exe", width: 640, height: 512, status: "welcome to your little corner of the internet" },
     computer: { name: "My computer", label: "My computer", icon: "folder", path: "my stuff", width: 540, height: 340, status: "6 items · all your stuff, in one place" },
     quotes: { name: "quotes.txt", label: "Quotes & jokes", icon: "quotes", file: "quotes.html", path: "my stuff\\quotes.txt", width: 600, height: 390, status: "3 entries · read-only · unfortunately" },
@@ -84,6 +97,7 @@
       ${appLink("inactive", "shortcut", "Account<br>graveyard")}
       ${appLink("nouveau", "shortcut", "Nouveau<br>checker")}
       ${appLink("terminal", "shortcut")}
+      ${appLink("readme", "shortcut")}
     </nav>
     <div class="wallpaper-brand" aria-hidden="true">${pixelLogo()}<p>your very personal computer.</p><p class="brand-version">version 1.0 / beep8.xyz</p></div>
     <div class="desktop-hint" aria-hidden="true">click an icon. poke around.<span>no installation required. probably a good thing.</span></div>`;
@@ -99,7 +113,7 @@
       <div class="start-heading">hello, internet person.</div>
       ${["home", "computer", "quotes", "inactive", "nouveau", "terminal", "note"].map((id) => appLink(id, "start-item")).join("")}
       <hr class="start-divider">
-      ${appLink("settings", "start-item")}${appLink("about", "start-item")}
+      ${appLink("find", "start-item")}${appLink("settings", "start-item")}${appLink("about", "start-item")}
       <hr class="start-divider">
       <button class="start-item" type="button" data-action="show-desktop">${icon("computer")}<span>Show desktop<small>give your windows a little rest</small></span></button>
     </div>`;
@@ -379,7 +393,7 @@
           <button class="window-control close" type="button" data-action="close" aria-label="Close ${app.name}" title="Close window"></button>
         </div>
       </header>
-      ${id !== "note" ? appMenuBar(id) : ""}
+      ${!["note", "find"].includes(id) ? appMenuBar(id) : ""}
       ${id === "computer" ? `<div class="address-bar"><span>Address</span><div class="address">${icon(app.icon)}C:\\beepOS\\${app.path}</div></div>` : ""}
       <div class="window-body" tabindex="-1"><div class="app-content"><p>opening file…</p></div></div>
       ${id !== "note" ? `<footer class="window-status"><span>${app.status}</span><span>beep8.xyz</span></footer>` : ""}`;
@@ -448,6 +462,13 @@
       loading.set(id, (async () => {
         const response = await fetch(asset(apps[id].file), { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (id === "readme") {
+          const text = document.createElement("pre");
+          text.textContent = await response.text();
+          const template = { html: text.outerHTML, className: "app-content readme-content" };
+          templates.set(id, template);
+          return template;
+        }
         const doc = new DOMParser().parseFromString(await response.text(), "text/html");
         const content = doc.querySelector("#page-content");
         if (!content || content.dataset.app !== id) throw new Error("File not found");
@@ -468,6 +489,8 @@
 
   function builtInContent(id) {
     switch (id) {
+      case "find":
+        return { className: "app-content error-content", html: `${icon("offline", "error-icon")}<p id="find-message"></p><button class="retro-button" type="button" data-action="close">OK</button>` };
       case "computer":
         return { className: "app-content computer-content", html: `<div class="app-grid" role="listbox" aria-label="Files in My Computer">${["home", "quotes", "inactive", "nouveau", "terminal", "note"].map((appId) => appLink(appId, "app-file")).join("")}</div>` };
       case "note":
@@ -497,6 +520,13 @@
 
   function initContent(win) {
     const root = win.body;
+    if (win.id === "find") {
+      const next = lastFindError < 0 ? Math.floor(Math.random() * findErrors.length) : (lastFindError + 1 + Math.floor(Math.random() * (findErrors.length - 1))) % findErrors.length;
+      lastFindError = next;
+      root.querySelector("#find-message").textContent = findErrors[next];
+      win.element.setAttribute("role", "alertdialog");
+      win.element.setAttribute("aria-describedby", "find-message");
+    }
     if (win.id === "nouveau") {
       checkNouveau(root);
       root.querySelector("#check-again").addEventListener("click", () => checkNouveau(root));
@@ -516,7 +546,7 @@
   async function openApp(id, { focus = true, initial = false } = {}) {
     if (!Object.hasOwn(apps, id)) return;
     closeStart();
-    if (windows.has(id)) { focusWindow(windows.get(id), !initial); return; }
+    if (windows.has(id)) { if (id === "find") initContent(windows.get(id)); focusWindow(windows.get(id), !initial); return; }
     const win = makeWindow(id, focus);
     try {
       const content = builtInContent(id) || await loadTemplate(id);
@@ -578,10 +608,10 @@
         return;
       }
       switch (command) {
-        case "help": print("help          you are here\nls / dir      list your files\nopen <app>    open an app (try 'open quotes')\nbeep          do the thing\ndate          check the time\nwhoami        a person on the internet\necho <text>   say something into the void\nclear / cls   tidy up\nexit          close the prompt"); break;
-        case "ls": case "dir": print("welcome    quotes    inactive    nouveau\ncomputer   note      settings    about"); break;
+        case "help": print("help          you are here\nls / dir      list your files\nopen <app>    open an app (try 'open quotes')\nbeep          do the thing\ndate          check the time\nwhoami        meet the person behind beepOS\necho <text>   say something into the void\nclear / cls   tidy up\nexit          close the prompt"); break;
+        case "ls": case "dir": print("welcome    quotes    inactive    nouveau\ncomputer   note      settings    about\nreadme     find"); break;
         case "open": {
-          const aliases = { welcome: "home", "quotes.txt": "quotes", accounts: "inactive", display: "settings" };
+          const aliases = { welcome: "home", "quotes.txt": "quotes", accounts: "inactive", display: "settings", "readme.md": "readme" };
           const id = aliases[args[0]] || args[0];
           if (id && Object.hasOwn(apps, id) && id !== "notfound") { print(`Opening ${apps[id].name}…`); openApp(id); }
           else print("File not found. Try 'ls' to see what's here.");
@@ -589,7 +619,7 @@
         }
         case "beep": print(beep(true) ? "beep! :3" : "beep! (audio isn't available in this browser)"); break;
         case "date": print(new Date().toLocaleString()); break;
-        case "whoami": print("an internet person with excellent taste in fake operating systems."); break;
+        case "whoami": print("Bug Hayes — a penname, not my real name, for privacy.\n17M, gay, and a protogen :3\nI'm a vibecoder who also makes Geometry Dash levels and stories.\nI generally like discovering new hobbies. apparently one hobby wasn't enough."); break;
         case "echo": print(raw.slice(command.length).trimStart() || "…the void says nothing back."); break;
         case "clear": case "cls": output.replaceChildren(); break;
         case "exit": closeWindow(win); return;

@@ -327,3 +327,7 @@ body > .app-content { max-width: 680px; margin: var(--space-4) auto; box-shadow:
   .window-body { overflow: visible; box-shadow: none; }
   .app-content { background: white; }
 }
+
+/* The desktop manual is a plain text document, like a tiny Notepad file. */
+.readme-content { padding: var(--space-2); }
+.readme-content pre { margin: 0; padding: 0; border: 0; box-shadow: none; background: transparent; color: var(--ink); font: var(--font-code); white-space: pre-wrap; overflow-wrap: anywhere; }
