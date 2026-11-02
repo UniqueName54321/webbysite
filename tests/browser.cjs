@@ -24,7 +24,7 @@ let browser;
     await active(id).waitFor();
     await active(id).locator('.app-content').waitFor();
   };
-  const close = async id => { await active(id).locator('[data-action="close"]').click(); };
+  const close = async id => { await active(id).locator('.window-controls [data-action="close"]').click(); };
   await page.goto(base);
   await active('home').locator('.home-content').waitFor();
   await check('home and sticky note open with no browser errors', async()=> {
@@ -68,15 +68,15 @@ let browser;
     assert.ok(after.width>before.width,'resize handle changes width');
   });
   await check('minimize, taskbar restore, maximize and restore', async()=> {
-    await active('quotes').locator('[data-action="minimize"]').click();
+    await active('quotes').locator('.window-controls [data-action="minimize"]').click();
     assert.equal(await page.locator('#window-quotes').isVisible(),false);
     await page.locator('.task-button[aria-controls="window-quotes"]').click();
     await active('quotes').waitFor();
     const original=await active('quotes').boundingBox();
-    await active('quotes').locator('[data-action="maximize"]').click();
+    await active('quotes').locator('.window-controls [data-action="maximize"]').click();
     assert.equal(await active('quotes').evaluate(el=>el.classList.contains('is-maximized')),true);
-    assert.equal(await active('quotes').locator('[data-action="maximize"]').getAttribute('title'),'Restore window');
-    await active('quotes').locator('[data-action="maximize"]').click();
+    assert.equal(await active('quotes').locator('.window-controls [data-action="maximize"]').getAttribute('title'),'Restore window');
+    await active('quotes').locator('.window-controls [data-action="maximize"]').click();
     assert.equal(Math.round((await active('quotes').boundingBox()).width),Math.round(original.width));
   });
   await check('apps are single-instance and close/reopen cleanly', async()=> {
@@ -227,16 +227,16 @@ let browser;
     await page.goto(base); await active('home').locator('.home-content').waitFor();
     await page.evaluate(()=>document.fonts.ready);
     assert.equal(await page.evaluate(()=>document.fonts.check('11px "Pixelated MS Sans Serif"')),true);
-    for (const [selector,size] of [['.window-titlebar > svg',16],['.shortcut svg',32],['.welcome-computer',64]]) {
+    for (const [selector,size] of [['.window-titlebar > svg',16],['.shortcut svg',32],['.welcome-computer',32]]) {
       assert.equal(await page.locator(selector).first().evaluate(el=>el.getBoundingClientRect().width),size);
     }
     await open('note');
     const frames=await page.locator('.os-window').evaluateAll(els=>els.map(el=>({background:getComputedStyle(el).backgroundColor,shadow:getComputedStyle(el).boxShadow})));
     assert.deepEqual(frames[0],frames[1]);
     for(const selector of ['.minimize','.maximize','.close']) assert.match(await active('note').locator(selector).evaluate(el=>getComputedStyle(el).backgroundImage),/data:image\/svg/);
-    await active('note').locator('[data-action="maximize"]').click();
+    await active('note').locator('.window-controls [data-action="maximize"]').click();
     assert.equal(await active('note').locator('.restore').count(),1);
-    await active('note').locator('[data-action="maximize"]').click();
+    await active('note').locator('.window-controls [data-action="maximize"]').click();
     await open('settings');
     await active('settings').locator('#desktop-sound').focus();
     const checked=await active('settings').locator('#desktop-sound').isChecked();
@@ -252,6 +252,84 @@ let browser;
     await page.screenshot({path:path.join(outputDir,'settings-mobile.png'),animations:'disabled'});
     await page.goto(base); await active('home').locator('.home-content').waitFor();
     await page.screenshot({path:path.join(outputDir,'mobile.png'),animations:'disabled'});
+  });
+  await check('Explorer selects files and File > Open reuses app routing', async()=> {
+    await page.setViewportSize({width:1440,height:900}); await page.goto(base);
+    await active('home').locator('.home-content').waitFor(); await open('computer');
+    const pane=active('computer');
+    assert.equal(await pane.locator('.app-file').count(),6);
+    assert.equal(await pane.locator('.address-bar').count(),1);
+    assert.equal(await pane.locator('h1').count(),0,'explorer should not contain a page hero');
+    await pane.locator('.app-file[data-open="quotes"]').click();
+    assert.equal(await pane.locator('[aria-selected="true"]').count(),1);
+    assert.match(await pane.locator('.window-status').textContent(),/1 object selected/);
+    assert.equal(await active('computer').count(),1,'single click selects rather than opens');
+    await pane.locator('summary').filter({hasText:/^File$/}).click();
+    await pane.locator('[data-explorer="open"]').click();
+    await active('quotes').locator('blockquote').first().waitFor();
+    assert.equal(await page.locator('#window-quotes .address-bar').count(),0);
+    await page.screenshot({path:path.join(outputDir,'quotes-native.png'),animations:'disabled'});
+    await page.locator('.task-button[aria-controls="window-computer"]').click();
+    await active('computer').locator('.app-file[data-open="quotes"]').dblclick();
+    await active('quotes').waitFor();
+    assert.equal(await page.locator('#window-quotes').count(),1);
+  });
+  await check('Explorer icon views, arrow navigation and menu keyboard interaction', async()=> {
+    await open('computer');
+    const pane=active('computer');
+    await pane.locator('summary').filter({hasText:/^View$/}).click();
+    await pane.locator('[data-explorer="small"]').click();
+    assert.equal(await pane.locator('.small-icons').count(),1);
+    assert.equal(await pane.locator('.app-file svg').first().evaluate(el=>el.getBoundingClientRect().width),16);
+    await pane.locator('.app-file').first().click();
+    await pane.locator('.app-file').first().press('End');
+    assert.equal(await pane.locator('[aria-selected="true"]').getAttribute('data-open'),'note');
+    await pane.locator('[aria-selected="true"]').press('Enter');
+    await active('note').waitFor(); await open('computer');
+    const summary=pane.locator('summary').filter({hasText:/^File$/});
+    await summary.focus(); await page.keyboard.press('ArrowDown');
+    assert.equal(await pane.locator('[data-explorer="open"]').evaluate(el=>el===document.activeElement),true);
+    await page.keyboard.press('Escape');
+    await summary.focus(); await page.keyboard.press('ArrowUp');
+    assert.equal(await pane.locator('.menu-popup [data-action="close"]').evaluate(el=>el===document.activeElement),true);
+    await page.keyboard.press('Escape');
+    assert.equal(await pane.locator('.app-menu[open]').count(),0);
+    await pane.locator('summary').filter({hasText:/^View$/}).click();
+    await page.screenshot({path:path.join(outputDir,'explorer-menu.png'),animations:'disabled'});
+    await pane.locator('[data-explorer="large"]').click();
+    assert.equal(await pane.locator('.small-icons').count(),0);
+    assert.equal(await pane.locator('.app-file svg').first().evaluate(el=>el.getBoundingClientRect().width),32);
+    await page.screenshot({path:path.join(outputDir,'explorer-desktop.png'),animations:'disabled'});
+    await pane.locator('summary').filter({hasText:/^File$/}).click();
+    await pane.locator('.menu-popup [data-action="close"]').click();
+    assert.equal(await page.locator('#window-computer').count(),0);
+  });
+  await check('Explorer supports touch opening on phones', async()=> {
+    const mobile=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true,reducedMotion:'reduce'});
+    const phone=await mobile.newPage();
+    await phone.goto(base); await phone.locator('.home-content').waitFor();
+    await phone.locator('.start-button').tap(); await phone.locator('.start-menu [data-open="computer"]').tap();
+    await phone.locator('.app-grid').waitFor();
+    await phone.screenshot({path:path.join(outputDir,'explorer-mobile.png'),animations:'disabled'});
+    await phone.locator('#window-computer .app-file[data-open="quotes"]').tap();
+    await phone.locator('#window-quotes.is-active blockquote').first().waitFor();
+    await mobile.close();
+  });
+  await check('desktop icons stay reachable at short, laptop and large resolutions', async()=> {
+    for(const [width,height] of [[800,480],[1280,720],[1920,1080]]) {
+      await page.setViewportSize({width,height}); await page.goto(base);
+      await active('home').locator('.home-content').waitFor();
+      await page.locator('.desktop-button').click();
+      for(const item of await page.locator('.shortcut').all()) {
+        const rect=await item.boundingBox();
+        assert.ok(rect.x>=0 && rect.x+rect.width<=width && rect.y>=0 && rect.y+rect.height<=height-34,`desktop icon outside ${width}x${height}`);
+      }
+      await page.screenshot({path:path.join(outputDir,`desktop-${width}x${height}.png`),animations:'disabled'});
+      await open('computer');
+      const box=await active('computer').boundingBox();
+      assert.ok(box.x>=0 && box.y>=0 && box.x+box.width<=width && box.y+box.height<=height-34);
+      assert.equal(await active('computer').locator('.window-title').evaluate(el=>getComputedStyle(el).fontSize),'11px');
+    }
   });
   assert.deepEqual(errors,[],'no uncaught browser errors');
   console.log(`\n${checks.length} browser checks passed; no uncaught JavaScript errors.`);

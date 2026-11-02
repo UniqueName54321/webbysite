@@ -20,15 +20,15 @@
   };
 
   const apps = {
-    home: { name: "welcome.exe", label: "Welcome", icon: "computer", file: "index.html", path: "welcome.exe", width: 780, height: 720, status: "welcome to your little corner of the internet" },
-    computer: { name: "My computer", label: "My computer", icon: "folder", path: "my stuff", width: 570, height: 465, status: "6 items · all your stuff, in one place" },
-    quotes: { name: "quotes.txt", label: "Quotes & jokes", icon: "quotes", file: "quotes.html", path: "my stuff\\quotes.txt", width: 660, height: 600, status: "3 entries · read-only · unfortunately" },
-    inactive: { name: "account graveyard", label: "Account graveyard", icon: "archive", file: "inactive.html", path: "my stuff\\account graveyard", width: 730, height: 680, status: "inactive, potentially inactive & formerly inactive" },
-    nouveau: { name: "NouveauBrowser checker", label: "Nouveau checker", icon: "globe", file: "nouveau/nouveautest.html", path: "utilities\\nouveau.exe", width: 550, height: 660, status: "browser diagnostics · The Nouveau Project" },
-    terminal: { name: "beep prompt", label: "Beep prompt", icon: "terminal", path: "system\\beep.exe", width: 620, height: 420, status: "type help to see what this thing can do" },
-    settings: { name: "Display properties", label: "Display settings", icon: "settings", path: "system\\display.exe", width: 465, height: 580, status: "make yourself at home" },
-    note: { name: "a note to self", label: "Sticky note", icon: "note", path: "my stuff\\note.txt", width: 245, height: 275, status: "" },
-    about: { name: "About beepOS", label: "About beepOS", icon: "beep", path: "system\\about.exe", width: 450, height: 490, status: "beepOS 1.0 · personal edition" },
+    home: { name: "welcome.exe", label: "Welcome", icon: "computer", file: "index.html", path: "welcome.exe", width: 640, height: 512, status: "welcome to your little corner of the internet" },
+    computer: { name: "My computer", label: "My computer", icon: "folder", path: "my stuff", width: 540, height: 340, status: "6 items · all your stuff, in one place" },
+    quotes: { name: "quotes.txt", label: "Quotes & jokes", icon: "quotes", file: "quotes.html", path: "my stuff\\quotes.txt", width: 600, height: 390, status: "3 entries · read-only · unfortunately" },
+    inactive: { name: "account graveyard", label: "Account graveyard", icon: "archive", file: "inactive.html", path: "my stuff\\account graveyard", width: 660, height: 550, status: "inactive, potentially inactive & formerly inactive" },
+    nouveau: { name: "NouveauBrowser checker", label: "Nouveau checker", icon: "globe", file: "nouveau/nouveautest.html", path: "utilities\\nouveau.exe", width: 480, height: 450, status: "browser diagnostics · The Nouveau Project" },
+    terminal: { name: "beep prompt", label: "Beep prompt", icon: "terminal", path: "system\\beep.exe", width: 600, height: 360, status: "type help to see what this thing can do" },
+    settings: { name: "Display properties", label: "Display settings", icon: "settings", path: "system\\display.exe", width: 420, height: 440, status: "make yourself at home" },
+    note: { name: "a note to self", label: "Sticky note", icon: "note", path: "my stuff\\note.txt", width: 225, height: 240, status: "" },
+    about: { name: "About beepOS", label: "About beepOS", icon: "beep", path: "system\\about.exe", width: 400, height: 360, status: "beepOS 1.0 · personal edition" },
     notfound: { name: "file not found", label: "File not found", icon: "offline", width: 540, height: 475, status: "error 404 · this file has left the chat" }
   };
   const initialApp = apps[source.dataset.app] ? source.dataset.app : "home";
@@ -267,6 +267,95 @@
     if (!maximized) constrainWindow(win);
   }
 
+  // Shared native menu presentation; actions reuse the existing window manager.
+  function appMenuBar(id) {
+    const menu = (label, content) => `<details class="app-menu"><summary>${label}</summary><div class="menu-popup">${content}</div></details>`;
+    return `<nav class="window-toolbar" aria-label="${apps[id].name} menu bar">${
+      menu("File", `${id === "computer" ? '<button type="button" data-explorer="open" disabled>Open</button><hr>' : ''}<button type="button" data-open="computer">My Computer</button><button type="button" data-action="close">Close</button>`) +
+      menu("View", `${id === "computer" ? '<button type="button" data-explorer="large" aria-pressed="true">Large Icons</button><button type="button" data-explorer="small" aria-pressed="false">Small Icons</button><hr>' : ''}<button type="button" data-action="maximize">Maximize / Restore</button>`) +
+      menu("Window", '<button type="button" data-action="minimize">Minimize</button><button type="button" data-action="show-desktop">Show Desktop</button>') +
+      menu("Help", '<button type="button" data-open="about">About beepOS</button>')
+    }</nav>`;
+  }
+
+  function initMenus(win) {
+    const menus = [...win.element.querySelectorAll(".app-menu")];
+    for (const menu of menus) {
+      menu.querySelector("summary").addEventListener("click", () => {
+        for (const other of menus) if (other !== menu) other.open = false;
+      });
+      menu.addEventListener("focusout", (event) => {
+        if (event.relatedTarget && !menu.contains(event.relatedTarget)) menu.open = false;
+      });
+      menu.addEventListener("keydown", (event) => {
+        const items = [...menu.querySelectorAll("button:not(:disabled)")];
+        const index = items.indexOf(document.activeElement);
+        if (event.key === "Escape") { menu.open = false; menu.querySelector("summary").focus(); }
+        else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+          event.preventDefault(); menu.open = true;
+          const next = index < 0 ? (event.key === "ArrowDown" ? 0 : items.length - 1) : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+          items[next]?.focus();
+        } else if (["ArrowLeft", "ArrowRight"].includes(event.key)) {
+          event.preventDefault(); menu.open = false;
+          const next = menus[(menus.indexOf(menu) + (event.key === "ArrowRight" ? 1 : -1) + menus.length) % menus.length];
+          next.open = true; next.querySelector("summary").focus();
+        }
+      });
+    }
+  }
+
+  function initExplorer(win) {
+    const grid = win.body.querySelector(".app-grid");
+    const files = [...grid.querySelectorAll(".app-file")];
+    const openButton = win.element.querySelector('[data-explorer="open"]');
+    let selected = null;
+    const select = (file) => {
+      selected = file;
+      for (const item of files) {
+        item.classList.toggle("is-selected", item === file);
+        item.setAttribute("aria-selected", String(item === file));
+        item.tabIndex = item === file || (!file && item === files[0]) ? 0 : -1;
+      }
+      openButton.disabled = !file;
+      win.element.querySelector(".window-status span").textContent = file
+        ? `${apps[file.dataset.open].name} · 1 object selected`
+        : `${files.length} objects`;
+    };
+    for (const file of files) {
+      file.setAttribute("role", "option");
+      file.addEventListener("click", (event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault(); select(file);
+        if (event.pointerType === "touch") openApp(file.dataset.open);
+      });
+      file.addEventListener("dblclick", (event) => { event.preventDefault(); openApp(file.dataset.open); });
+      file.addEventListener("keydown", (event) => {
+        const index = files.indexOf(file);
+        const columns = getComputedStyle(grid).gridTemplateColumns.split(" ").length;
+        const offsets = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns };
+        if (Object.hasOwn(offsets, event.key) || ["Home", "End"].includes(event.key)) {
+          event.preventDefault();
+          const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? files.length - 1 : Math.max(0, Math.min(files.length - 1, index + offsets[event.key]));
+          select(files[nextIndex]); files[nextIndex].focus();
+        } else if (event.key === "Enter") { event.preventDefault(); openApp(file.dataset.open); }
+        else if (event.key === " ") { event.preventDefault(); select(file); }
+      });
+    }
+    win.body.addEventListener("click", (event) => { if (!event.target.closest(".app-file")) select(null); });
+    for (const button of win.element.querySelectorAll("[data-explorer]")) {
+      button.addEventListener("click", () => {
+        if (button.dataset.explorer === "open") { if (selected) openApp(selected.dataset.open); }
+        else {
+          const small = button.dataset.explorer === "small";
+          grid.classList.toggle("small-icons", small);
+          win.element.querySelector('[data-explorer="large"]').setAttribute("aria-pressed", String(!small));
+          win.element.querySelector('[data-explorer="small"]').setAttribute("aria-pressed", String(small));
+        }
+      });
+    }
+    select(null);
+  }
+
   function makeWindow(id, focus) {
     const app = apps[id];
     const el = document.createElement("section");
@@ -276,11 +365,11 @@
     const width = Math.min(app.width, desktop.clientWidth - 24);
     const height = Math.min(app.height, desktop.clientHeight - 96);
     const offset = (windows.size % 5) * 26;
-    const homeLeft = Math.max(140, Math.round((desktop.clientWidth - 1050) / 2));
+    const homeLeft = Math.max(104, Math.round((desktop.clientWidth - 940) / 2));
     el.style.width = `${width}px`;
     el.style.height = `${height}px`;
     el.style.left = `${id === "home" ? homeLeft : id === "note" ? desktop.clientWidth - width - 40 : homeLeft + 54 + offset}px`;
-    el.style.top = `${id === "home" ? 68 : id === "note" ? 107 : 87 + offset}px`;
+    el.style.top = `${id === "home" ? 48 : id === "note" ? 64 : 64 + offset}px`;
     el.innerHTML = `
       <header class="title-bar window-titlebar" tabindex="0" aria-label="${app.name} title bar. Drag or use arrow keys to move; double-click to maximize.">
         ${icon(app.icon)}<h2 class="title-bar-text window-title" id="title-${id}">${app.name}</h2>
@@ -290,8 +379,8 @@
           <button class="window-control close" type="button" data-action="close" aria-label="Close ${app.name}" title="Close window"></button>
         </div>
       </header>
-      ${id !== "note" ? `<nav class="window-toolbar" aria-label="${app.name} navigation"><button type="button" data-action="show-desktop">Desktop</button><button type="button" data-open="computer">My files</button><button type="button" data-open="about">About</button><span class="toolbar-caption">beepOS / personal edition</span></nav>
-      <div class="address-bar"><span>Location</span><div class="address">${icon(app.icon)}C:\\beepOS\\${app.path || "???"}</div></div>` : ""}
+      ${id !== "note" ? appMenuBar(id) : ""}
+      ${id === "computer" ? `<div class="address-bar"><span>Address</span><div class="address">${icon(app.icon)}C:\\beepOS\\${app.path}</div></div>` : ""}
       <div class="window-body" tabindex="-1"><div class="app-content"><p>opening file…</p></div></div>
       ${id !== "note" ? `<footer class="window-status"><span>${app.status}</span><span>beep8.xyz</span></footer>` : ""}`;
 
@@ -346,6 +435,7 @@
       win.observer = new ResizeObserver(() => constrainWindow(win));
       win.observer.observe(el);
     }
+    initMenus(win);
     constrainWindow(win);
     if (focus) focusWindow(win);
     else el.style.zIndex = ++topLayer;
@@ -379,7 +469,7 @@
   function builtInContent(id) {
     switch (id) {
       case "computer":
-        return { className: "app-content computer-content", html: `<p class="eyebrow">C:\\beepOS\\my stuff</p><h1>My computer<span class="accent">.</span></h1><p>an extremely sophisticated filing system for my stuff.</p><div class="app-grid">${["home", "quotes", "inactive", "nouveau", "terminal", "note"].map((appId) => appLink(appId, "app-file")).join("")}</div>` };
+        return { className: "app-content computer-content", html: `<div class="app-grid" role="listbox" aria-label="Files in My Computer">${["home", "quotes", "inactive", "nouveau", "terminal", "note"].map((appId) => appLink(appId, "app-file")).join("")}</div>` };
       case "note":
         return { className: "app-content note-content", html: `<div class="note-kicker"><span>NOTE TO SELF</span><span>001</span></div><label for="sticky-note" class="sr-only">Your sticky note</label><textarea id="sticky-note" maxlength="2000" spellcheck="false"></textarea><p class="note-save" role="status">editable · saves on this computer</p>` };
       case "settings":
@@ -420,6 +510,7 @@
       });
     }
     if (win.id === "terminal") initTerminal(win);
+    if (win.id === "computer") initExplorer(win);
   }
 
   async function openApp(id, { focus = true, initial = false } = {}) {
@@ -504,6 +595,7 @@
     const target = event.target.closest("a, button");
     if (!target) return;
     if (target.tagName === "A" && (target.getAttribute("href")?.startsWith("#") || target.hasAttribute("download") || (target.target && target.target !== "_self"))) return;
+    target.closest(".app-menu")?.removeAttribute("open");
     let id = target.dataset.open;
     if (!id && target.tagName === "A" && !target.hasAttribute("data-direct")) {
       const url = new URL(target.href, location.href);
@@ -544,6 +636,7 @@
     if (opening) startMenu.querySelector(".start-item").focus();
   });
   document.addEventListener("pointerdown", (event) => {
+    for (const menu of document.querySelectorAll(".app-menu[open]")) if (!menu.contains(event.target)) menu.open = false;
     if (!startMenu.hidden && !startMenu.contains(event.target) && !startButton.contains(event.target)) closeStart();
   });
   document.addEventListener("keydown", (event) => {

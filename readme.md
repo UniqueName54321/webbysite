@@ -27,7 +27,7 @@ Open `http://localhost:8765`. Use an HTTP server rather than opening the HTML fi
 
 Edit content in the HTML pages. The desktop loads their `#page-content` elements into windows; opening an existing URL directly starts that app. Those pages also remain readable without JavaScript. Internal links keep their real destinations, including for opening in a new tab.
 
-Click a desktop icon or use Start to open an app. Drag a title bar to move a window (or focus it and use arrow keys; Shift moves farther), drag its bottom-right corner to resize, or double-click its title bar to maximize. Window buttons and taskbar buttons minimize, restore, and close apps. On phones, the active app fills the desktop; Start and the taskbar still switch apps.
+Click a desktop icon or use Start to open an app. Drag a title bar to move a window (or focus it and use arrow keys; Shift moves farther), drag its bottom-right corner to resize, or double-click its title bar to maximize. Window buttons and taskbar buttons minimize, restore, and close apps. My Computer uses single-click selection, double-click/Enter to open, arrow keys to navigate, and File/View menus for opening and icon views. On phones, tap a file to open it; the active app fills the desktop, and Start and the taskbar still switch apps.
 
 The sticky note, wallpaper, and optional sounds save only in this browser's local storage. Notes never leave the browser. The beep prompt is a toy, not a shell; type `help` for its commands.
 
