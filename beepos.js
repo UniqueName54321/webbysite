@@ -26,7 +26,7 @@
     inactive: { name: "account graveyard", label: "Account graveyard", icon: "archive", file: "inactive.html", path: "my stuff\\account graveyard", width: 730, height: 680, status: "inactive, potentially inactive & formerly inactive" },
     nouveau: { name: "NouveauBrowser checker", label: "Nouveau checker", icon: "globe", file: "nouveau/nouveautest.html", path: "utilities\\nouveau.exe", width: 550, height: 660, status: "browser diagnostics · The Nouveau Project" },
     terminal: { name: "beep prompt", label: "Beep prompt", icon: "terminal", path: "system\\beep.exe", width: 620, height: 420, status: "type help to see what this thing can do" },
-    settings: { name: "Display properties", label: "Display settings", icon: "settings", path: "system\\display.exe", width: 465, height: 520, status: "make yourself at home" },
+    settings: { name: "Display properties", label: "Display settings", icon: "settings", path: "system\\display.exe", width: 465, height: 580, status: "make yourself at home" },
     note: { name: "a note to self", label: "Sticky note", icon: "note", path: "my stuff\\note.txt", width: 245, height: 275, status: "" },
     about: { name: "About beepOS", label: "About beepOS", icon: "beep", path: "system\\about.exe", width: 450, height: 490, status: "beepOS 1.0 · personal edition" },
     notfound: { name: "file not found", label: "File not found", icon: "offline", width: 540, height: 475, status: "error 404 · this file has left the chat" }
@@ -260,6 +260,8 @@
     const maximized = win.element.classList.toggle("is-maximized");
     const button = win.element.querySelector('[data-action="maximize"]');
     button.setAttribute("aria-label", `${maximized ? "Restore" : "Maximize"} ${apps[win.id].name}`);
+    button.classList.toggle("restore", maximized);
+    button.classList.toggle("maximize", !maximized);
     button.title = maximized ? "Restore window" : "Maximize window";
     focusWindow(win);
     if (!maximized) constrainWindow(win);
@@ -268,7 +270,7 @@
   function makeWindow(id, focus) {
     const app = apps[id];
     const el = document.createElement("section");
-    el.className = `os-window${id === "note" ? " note-window" : ""}`;
+    el.className = `window os-window${id === "note" ? " note-window" : ""}`;
     el.id = `window-${id}`;
     el.setAttribute("aria-labelledby", `title-${id}`);
     const width = Math.min(app.width, desktop.clientWidth - 24);
@@ -280,12 +282,12 @@
     el.style.left = `${id === "home" ? homeLeft : id === "note" ? desktop.clientWidth - width - 40 : homeLeft + 54 + offset}px`;
     el.style.top = `${id === "home" ? 68 : id === "note" ? 107 : 87 + offset}px`;
     el.innerHTML = `
-      <header class="window-titlebar" tabindex="0" aria-label="${app.name} title bar. Drag or use arrow keys to move; double-click to maximize.">
-        ${icon(app.icon)}<h2 class="window-title" id="title-${id}">${app.name}</h2>
-        <div class="window-controls">
-          <button class="window-control" type="button" data-action="minimize" aria-label="Minimize ${app.name}" title="Minimize window"><span class="control-minimize" aria-hidden="true"></span></button>
-          <button class="window-control" type="button" data-action="maximize" aria-label="Maximize ${app.name}" title="Maximize window"><span class="control-maximize" aria-hidden="true"></span></button>
-          <button class="window-control" type="button" data-action="close" aria-label="Close ${app.name}" title="Close window"><span class="control-close" aria-hidden="true">×</span></button>
+      <header class="title-bar window-titlebar" tabindex="0" aria-label="${app.name} title bar. Drag or use arrow keys to move; double-click to maximize.">
+        ${icon(app.icon)}<h2 class="title-bar-text window-title" id="title-${id}">${app.name}</h2>
+        <div class="title-bar-controls window-controls">
+          <button class="window-control minimize" type="button" data-action="minimize" aria-label="Minimize ${app.name}" title="Minimize window"></button>
+          <button class="window-control maximize" type="button" data-action="maximize" aria-label="Maximize ${app.name}" title="Maximize window"></button>
+          <button class="window-control close" type="button" data-action="close" aria-label="Close ${app.name}" title="Close window"></button>
         </div>
       </header>
       ${id !== "note" ? `<nav class="window-toolbar" aria-label="${app.name} navigation"><button type="button" data-action="show-desktop">Desktop</button><button type="button" data-open="computer">My files</button><button type="button" data-open="about">About</button><span class="toolbar-caption">beepOS / personal edition</span></nav>
@@ -381,7 +383,7 @@
       case "note":
         return { className: "app-content note-content", html: `<div class="note-kicker"><span>NOTE TO SELF</span><span>001</span></div><label for="sticky-note" class="sr-only">Your sticky note</label><textarea id="sticky-note" maxlength="2000" spellcheck="false"></textarea><p class="note-save" role="status">editable · saves on this computer</p>` };
       case "settings":
-        return { className: "app-content settings-content", html: `<p class="eyebrow">make it yours</p><h1>Display properties<span class="accent">.</span></h1><p>same little OS. different little mood.</p><fieldset><legend>Desktop colour</legend><div class="theme-options">${Object.entries(themes).map(([id, colors]) => `<label class="theme-option"><span class="theme-swatch" style="background:${colors[0]}">${icon("computer")}</span><span>${id}</span><input type="radio" name="desktop-theme" value="${id}" ${theme === id ? "checked" : ""}></label>`).join("")}</div></fieldset><fieldset><legend>The little details</legend><label class="setting-check"><input type="checkbox" name="wallpaper-dots" ${plainWallpaper ? "" : "checked"}> Dotted wallpaper</label><label class="setting-check"><input type="checkbox" name="desktop-sound" ${soundEnabled ? "checked" : ""}> Tiny computer noises</label></fieldset><p class="settings-note">Changes apply immediately and stay on this browser.<br>No restart required. What a concept.</p>` };
+        return { className: "app-content settings-content", html: `<p class="eyebrow">make it yours</p><h1>Display properties<span class="accent">.</span></h1><p>same little OS. different little mood.</p><fieldset><legend>Desktop colour</legend><div class="theme-options">${Object.entries(themes).map(([id, colors]) => `<div class="theme-option"><span class="theme-swatch" style="background:${colors[0]}">${icon("computer")}</span><div class="field-row"><input id="theme-${id}" type="radio" name="desktop-theme" value="${id}" ${theme === id ? "checked" : ""}><label for="theme-${id}">${id}</label></div></div>`).join("")}</div></fieldset><fieldset><legend>The little details</legend><div class="field-row setting-check"><input id="wallpaper-dots" type="checkbox" name="wallpaper-dots" ${plainWallpaper ? "" : "checked"}><label for="wallpaper-dots">Dotted wallpaper</label></div><div class="field-row setting-check"><input id="desktop-sound" type="checkbox" name="desktop-sound" ${soundEnabled ? "checked" : ""}><label for="desktop-sound">Tiny computer noises</label></div></fieldset><p class="settings-note">Changes apply immediately and stay on this browser.<br>No restart required. What a concept.</p>` };
       case "about":
         return { className: "app-content about-content", html: `${icon("beep")}<p class="eyebrow">welcome to your very personal computer</p><h1>beepOS</h1><p>an operating system for my corner of the internet.<br>just a page for me and my crap, with more windows.</p><dl class="about-specs"><div><dt>Version</dt><dd>1.0 / personal edition</dd></div><div><dt>System requirements</dt><dd>a browser &amp; curiosity</dd></div><div><dt>Available storage</dt><dd>enough for my crap</dd></div><div><dt>Powered by</dt><dd>HTML, CSS &amp; JavaScript</dd></div></dl><p>Inspired by the wonderfully weird web desktops of<br><a href="https://www.windows93.net/">Windows 93</a> &amp; <a href="https://windows96.net/">Windows 96</a>.</p><button class="retro-button" type="button" data-action="beep">beep!</button>` };
       case "terminal":

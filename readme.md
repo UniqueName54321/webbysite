@@ -2,7 +2,7 @@
 
 [beep8.xyz](https://beep8.xyz/), disguised as a very personal computer.
 
-Static HTML, CSS, and vanilla JavaScript. No build step, packages, remote fonts, or runtime dependencies. Cloudflare Pages serves the repository directly.
+Static HTML, CSS, and vanilla JavaScript, styled with a locally vendored copy of 98.css. No build step, package installation, remote fonts, or JavaScript runtime dependencies. Cloudflare Pages serves the repository directly.
 
 ## Run locally
 
@@ -21,7 +21,9 @@ Open `http://localhost:8765`. Use an HTTP server rather than opening the HTML fi
 - `404.html` — the missing-file app. Assets use root paths so nested missing URLs work on Cloudflare Pages.
 - `beepos.js` — desktop, app loading, window management, taskbar, start menu, terminal, and preferences.
 - `style.css` — desktop and app styles, including mobile, print, and reduced-motion support.
+- `DESIGN.md` — the shared Windows 93/98 visual system, 98.css evaluation and component rules.
 - `assets/` — original SVG pixel icons and favicon.
+- `assets/vendor/98.css/` — pinned 98.css 0.1.21, its fonts and upstream license.
 
 Edit content in the HTML pages. The desktop loads their `#page-content` elements into windows; opening an existing URL directly starts that app. Those pages also remain readable without JavaScript. Internal links keep their real destinations, including for opening in a new tab.
 
@@ -36,6 +38,14 @@ node --check beepos.js
 git diff --check
 ```
 
-Browser regression checks for this migration covered all original content and external links; window dragging, resizing, controls, and single-instance apps; keyboard navigation; direct URLs and nested assets; both Nouveau API outcomes; terminal commands; note and preference persistence; unavailable storage; failed app requests and retry; offline status; JavaScript-disabled pages; and layouts from 320px to 1440px wide.
+Run the reproducible Playwright checks with the preview server running. Test tooling can live outside the site:
+
+```sh
+npm install --prefix /tmp/beepos-test-tools playwright
+/tmp/beepos-test-tools/node_modules/.bin/playwright install chromium
+PLAYWRIGHT_MODULE=/tmp/beepos-test-tools/node_modules/playwright node tests/browser.cjs
+```
+
+Tests save desktop/mobile screenshots to the system temporary directory under `beepos-screenshots`. Set `BEEPOS_URL` or `BEEPOS_SCREENSHOTS` to override the preview URL or screenshot directory. See `DESIGN.md` for coverage and visual conventions.
 
 Pushing `main` triggers the connected Cloudflare Pages deployment.
