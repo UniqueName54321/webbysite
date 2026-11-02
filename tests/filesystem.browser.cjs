@@ -40,8 +40,8 @@ async function rawDisk(p, replacement) {
     await p.route('**/filesystem.js',async route=>{await gate;await route.continue()});
     await p.goto(base,{waitUntil:'domcontentloaded'});await p.locator('.boot-screen').waitFor();
     assert.equal(await p.locator('.desktop').evaluate(el=>el.inert),true);
-    assert.match(await p.locator('.boot-screen').textContent(),/1.0.*FINAL RELEASE/s);
-    await screenshot(p,'boot-1.0.png');release();
+    assert.match(await p.locator('.boot-screen').textContent(),/1.1.*GRAVITY UPDATE/s);
+    await screenshot(p,'boot-1.1.png');release();
     await p.locator('.home-content').waitFor();await p.locator('.boot-screen').waitFor({state:'detached'});
     await p.unroute('**/filesystem.js');
   });
@@ -117,11 +117,11 @@ async function rawDisk(p, replacement) {
     assert.equal(await active(p).locator('textarea').evaluate(el=>el.readOnly),true);
     assert.match(await active(p).locator('textarea').inputValue(),/green toaster/);
     assert.equal(await active(p).locator('.editor-tools [data-fs="save"]').isDisabled(),true);
-    await go(p,'C:\\beepOS');await file(p,'VERSION.txt').dblclick();assert.match(await active(p).locator('textarea').inputValue(),/1.0.*FINAL/);
+    await go(p,'C:\\beepOS');await file(p,'VERSION.txt').dblclick();assert.match(await active(p).locator('textarea').inputValue(),/1.1/);
   });
   await check('prompt navigates and creates real disk entries while dangerous commands remain jokes',async()=>{
     await p.locator('.start-button').click();await p.locator('.start-menu [data-open="terminal"]').click();
-    const input=active(p).locator('input');
+    const input=active(p).locator('.terminal-content input');
     async function command(text){await input.fill(text);await input.press('Enter');await p.waitForFunction(()=>!document.querySelector('.terminal-content input').disabled)}
     await command('mkdir "Prompt Stuff"');await command('cd "Prompt Stuff"');await command('touch diary.txt');await command('pwd');
     assert.match(await active(p).locator('.terminal-output').textContent(),/my stuff\\Prompt Stuff/);

@@ -1,6 +1,8 @@
 /* beepOS virtual disk. IndexedDB transactions serialize writes across tabs.
    User text is data, never executable HTML or JavaScript. */
 const MAX_NODES = 2048;
+const RELEASE_TEXT = 'beepOS 1.1\nThe windows have developed gravity. Please remain approximately upright.\nYour 1.0 files are still here.\n— Bug Hayes :3';
+const RELEASE_10 = 'beepOS 1.0 — FINAL\nThe cupboards are real now. Well, browser-real.\nThanks for exploring my little corner of the internet.\n— Bug Hayes :3';
 const MAX_TEXT = 262144;
 export function validName(name) {
   return typeof name === 'string' && name.length > 0 && name.length <= 120 &&
@@ -24,7 +26,7 @@ export function seedDisk(apps) {
   }
   for (const id of ['settings', 'about', 'find']) add(`app-${id}`, 'system', apps[id].name, 'app', { app: id });
   const notes = [
-    ['release', 'os', 'VERSION.txt', 'beepOS 1.0 — FINAL\nThe cupboards are real now. Well, browser-real.\nThanks for exploring my little corner of the internet.\n— Bug Hayes :3'],
+    ['release', 'os', 'VERSION.txt', RELEASE_TEXT],
     ['bootlog', 'logs', 'boot.log', '[OK] found pixels\n[OK] fed the protogen\n[WARN] user may right-click the wallpaper\n[OK] mounted C:\\ without asking a single floppy disk'],
     ['secret', 'secrets', 'do not read.txt', 'Well, that sign lasted approximately zero seconds.\nThere is no prize. Just a green toaster looking impressed. :3'],
     ['ram', 'system', 'RAM.txt', 'Please do not download more RAM.\nThe last batch was full of raisins.'],
@@ -101,7 +103,11 @@ export async function createFilesystem(apps) {
       tx.onerror = tx.onabort = () => reject(failure || Error('Could not save the disk. Storage may be full.'));
     });
   }
-  try { db = await openDatabase(); await transaction(() => {}); }
+  try { db = await openDatabase(); await transaction(disk => {
+    // Content-only migration: never reseed or modify user files on upgrade.
+    const release = disk.nodes.find(n => n.id === 'release');
+    if (release?.locked && release.type === 'text' && release.content === RELEASE_10) release.content = RELEASE_TEXT;
+  }); }
   catch (error) { db?.close(); db = null; warning = `${error.message} Temporary disk: changes will not survive a reload. Any existing stored disk was left untouched.`; }
   const persistent = !!db;
   let channel;
@@ -151,6 +157,19 @@ export async function createFilesystem(apps) {
     },
     async rename(id, name) {
       await mutate(disk => { const n = disk.nodes.find(n => n.id === id); if (!n || n.locked) throw Error('System files cannot be renamed.'); assertName(disk, n.parent, name, id); n.name = name; });
+    },
+    async remove(id) {
+      let removed = [];
+      await mutate(disk => {
+        const entry = disk.nodes.find(n => n.id === id);
+        if (!entry || entry.locked) throw Error('Protected system items cannot be deleted.');
+        const ids = new Set([id]);
+        let changed = true;
+        while (changed) { changed = false; for (const n of disk.nodes) if (ids.has(n.parent) && !ids.has(n.id)) { ids.add(n.id); changed = true; } }
+        if (disk.nodes.some(n => ids.has(n.id) && n.locked)) throw Error('This folder contains protected system items.');
+        removed = [...ids]; disk.nodes = disk.nodes.filter(n => !ids.has(n.id));
+      });
+      return removed;
     },
     subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
     refresh

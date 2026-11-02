@@ -18,6 +18,10 @@ windows have buttons in the corner. they do approximately what you'd expect.
 you can drag the title bar, resize a corner, and retrieve a minimized window
 from the taskbar. if things get crowded, show the desktop and start poking again.
 
+in 1.1, the Window menu can make things less... upright. effects are optional.
+if reality becomes inconvenient, Start > Reset window effects puts it back.
+right-click inside My Computer for file things. deletion asks first.
+
 ## what lives here
 
 some writing, some links, some questionable humour, and assorted bits of me.

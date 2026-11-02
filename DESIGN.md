@@ -37,19 +37,31 @@ The taskbar uses `--taskbar-height` consistently with the desktop work area. Des
 
 ## Desktop context menus
 
-The desktop handles `contextmenu` only outside `.os-window`. Background clicks get one joke action; desktop shortcuts get Open and Properties. Window events are left uncancelled for native browser behavior or app-owned handlers. Keep this boundary when adding future actions.
+The desktop handles `contextmenu` only outside `.os-window`. Background clicks get one joke action; desktop shortcuts get Open and Properties. Window events are left uncancelled by the desktop for native browser behavior or app-owned handlers. Explorer now handles only its file pane: New File/Folder on the background, Open/Rename/Delete on items. Address/edit fields retain browser context menus. Keep this boundary when adding future actions.
 
 The context popup reuses the shared menu styles, fits within the viewport, supports Shift+F10 / the context-menu key, arrow navigation and Escape, and dismisses on outside pointer actions, resize or blur. Properties uses the existing window manager and shows shortcut metadata without inventing disk sizes or modification dates.
 
 ## Virtual disk and boot
 
-`filesystem.js` owns schema version 1 in IndexedDB database `beepOS-filesystem`, object store `disk`, key `C`. It seeds only a missing disk and validates existing data before use. Built-in folders/shortcuts/text are locked against rename/edit; user folders and text can be created and renamed. All desktop app shortcuts live under `C:\beepOS\my stuff`; static HTML routes remain valid. Stored user names/content are rendered with DOM text/value APIs, never as executable markup.
+`filesystem.js` owns schema version 1 in IndexedDB database `beepOS-filesystem`, object store `disk`, key `C`. It seeds only a missing disk and validates existing data before use. Built-in folders/shortcuts/text are locked against rename/edit; user folders and text can be created, renamed and deleted with confirmation. Recursive deletion is transactional and rejects protected descendants; local unsaved edits block deletion, while deleted documents in other tabs retain a copyable draft/snapshot. All desktop app shortcuts live under `C:\beepOS\my stuff`; static HTML routes remain valid. Stored user names/content are rendered with DOM text/value APIs, never as executable markup.
 
 All writes run in read/write transactions against the latest stored disk. BroadcastChannel and focus refresh keep tabs current; an editor checks its previous saved text before overwriting a changed file. Failed writes do not commit or clear the editor draft. Existing localStorage note/preferences remain separate and untouched. Inaccessible or invalid storage uses a clearly labelled temporary session and never resets existing data. There is no implicit formatting/reset command.
 
 The boot screen is shown during module loading and disk initialization, with an indeterminate 98.css progress bar and reduced-motion support. It does not add a fake minimum delay. The desktop stays inert until the initial app is ready. Boot errors offer Retry rather than silently wiping storage.
 
-The disk is limited to 2048 entries and 256 Ki UTF-16 code units per text file. Names follow case-insensitive Windows-style collision/reserved-name rules. Root/system anchors and parent relationships are validated, including cycle detection. Future disk schema versions require explicit migration; do not reseed over an existing disk.
+The disk is limited to 2048 entries and 256 Ki UTF-16 code units per text file. Names follow case-insensitive Windows-style collision/reserved-name rules. Root/system anchors and parent relationships are validated, including cycle detection. Future disk schema versions require explicit migration; do not reseed over an existing disk. Release 1.1 keeps schema version 1 and changes only the exact known locked 1.0 VERSION.txt content. User nodes are not reseeded or rewritten.
+
+## Window effects and application menus (1.1)
+
+Window effects are session-only and off by default. The Window menu has a native range control, 15-degree rotation buttons and an independent physics toggle. CSS `rotate` leaves the drag/resize manager intact; Start > Reset window effects is always available outside the transformed windows. Maximized windows restore before setting a nonzero angle. Rotated frames scale down only when needed to fit the work area, so phone controls stay reachable. Maximizing straightens the window. Mobile users have the same global rescue action.
+
+`window-effects.js` positions actual content nodes without reparenting or cloning them. Explorer items keep their grid event delegation, forms keep native controls and listeners, and textareas keep drafts. The fixed-step rectangle solver applies world-down gravity in the rotated window’s local coordinates, resolves item/wall collisions and supports pointer grabs/throws. Bulky nodes scale to fit; up to 64 direct items are supported per window to bound CPU cost. Menus/chrome are outside the simulation.
+
+Disabling restores original inline styles and scroll position. Folder/content changes and window resizing rebuild the simulation; minimizing, mobile inactive windows and document visibility pause animation. Closing disconnects observers and cancels frames. Do not persist simulated item positions or write physics state into the disk.
+
+App menus share one builder and native controls, but Explorer gets Go/file actions, the prompt gets Command actions, browser diagnostics gets Browser actions, settings gets Display actions, editors get Edit/Save and documents get selection/print. Help opens an independent About window for the originating app. Internal About dialogs use the system About as their own information view rather than recursing forever.
+
+Opening the `app-computer` shortcut through the virtual disk opens the fixed IMDb URL for Inception in a new tab with noopener/noreferrer. Start/desktop/File menu launchers still open the normal Explorer; no user data is attached to the external URL.
 
 ## Browser checks
 
@@ -58,3 +70,5 @@ The disk is limited to 2048 entries and 256 Ki UTF-16 code units per text file. 
 Screenshots are written to the system temporary directory under `beepos-screenshots`, including desktop, mobile, Explorer, documents and display settings. Override `BEEPOS_SCREENSHOTS` to save elsewhere. Inspect these images after changing the visual system.
 
 `tests/filesystem.browser.cjs` adds boot, persistence/reload, hierarchy, new/rename/edit, invalid names, quota failures, stale saves, cross-tab concurrency, read-only seeds, prompt commands, mobile layouts, unavailable storage and damaged-disk recovery checks. It captures the boot screen, disk root, editor and mobile Explorer.
+
+`tests/version11.browser.cjs` covers actual rotation/dragging, slider keyboard input, collision response, per-window physics and DOM restoration, editor input preservation, app menus/About, recursive and protected deletion, Inception navigation, mobile recovery, and a populated 1.0 disk upgrade. Screenshots use the `v11-` prefix.

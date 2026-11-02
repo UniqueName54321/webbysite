@@ -1,5 +1,16 @@
 # beepOS releases
 
+## 1.1 — the gravity update
+
+- Rotate windows from their Window menu, with a slider and 15-degree steps.
+- Enable item physics independently per window: gravity, wall/item collisions and grab/throw interactions. Disabling it restores the original DOM, controls and editor drafts.
+- Added a Start-menu rescue action to reset every window’s rotation and physics.
+- Explorer owns its file-pane context menu: create files/folders, open/rename items and confirm deletion of user items (including folder contents). System items remain protected.
+- Opening My Computer’s shortcut inside `C:\beepOS\my stuff` opens Inception on IMDb. Normal launchers still open Explorer.
+- Apps now have relevant submenus and independent About dialogs; text editors and readonly documents get their own information.
+- Existing 1.0 disks are preserved. The schema stays at version 1; only the known locked 1.0 release note is migrated.
+- Added rotation, collision, restoration, deletion, popup, mobile rescue and migration tests with screenshots.
+
 ## 1.0 — final update
 
 - Added a persistent virtual C: disk backed by transactional IndexedDB storage.

@@ -42,7 +42,7 @@ let browser;
     for(const text of ['yet_another_account123','UniqueName54321','AltF4ForWeatherUpdates','DifferentDance8','SomeoneReturns','Olflix','maybe making a comeback']) assert.ok((await page.locator('.home-content').textContent()).includes(text),text);
   });
   await check('quotes open as an app and retain every joke', async()=> {
-    await active('home').locator('[data-open="quotes"]').click();
+    await active('home').locator('.window-body [data-open="quotes"]').click();
     await active('quotes').locator('blockquote').first().waitFor();
     assert.equal(await active('quotes').locator('blockquote').count(),3);
     assert.match(await active('quotes').textContent(),/buoy-meets-gull/);
@@ -114,7 +114,7 @@ let browser;
   });
   await check('terminal commands, history, safe echo, and opening apps', async()=> {
     await open('terminal');
-    const input=active('terminal').locator('input');
+    const input=active('terminal').locator('.terminal-content input');
     async function command(s){await input.fill(s); await input.press('Enter');}
     await command('help'); assert.match(await active('terminal').textContent(),/open <app>/);
     await command('echo <img src=x onerror=alert(1)>');
@@ -334,7 +334,7 @@ let browser;
   await check('dangerous-command eggs only print roasts and preserve notes', async()=> {
     await page.goto(base); await active('home').locator('.home-content').waitFor();
     await open('terminal');
-    const input=active('terminal').locator('input');
+    const input=active('terminal').locator('.terminal-content input');
     const before=await page.evaluate(()=>JSON.stringify({...localStorage}));
     for (const [command,expected] of [
       ['sudo rm -rf /','flamethrower'], ['mkfs.ext4 /dev/sda','priorities'],
@@ -369,8 +369,8 @@ let browser;
     assert.doesNotMatch(await active('readme').textContent(),/rm -rf|mkfs|fork bomb/);
     await page.screenshot({path:path.join(outputDir,'readme-desktop.png'),animations:'disabled'});
     await open('terminal');
-    await active('terminal').locator('input').fill('whoami');
-    await active('terminal').locator('input').press('Enter');
+    await active('terminal').locator('.terminal-content input').fill('whoami');
+    await active('terminal').locator('.terminal-content input').press('Enter');
     const bio=await active('terminal').locator('.terminal-output').textContent();
     for(const word of ['Bug Hayes','penname','privacy','17M','gay','protogen','vibecoder','Geometry Dash','stories','hobbies']) assert.ok(bio.includes(word),word);
     await page.setViewportSize({width:390,height:844});
