@@ -3,39 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>beep8.xyz</title>
+    <meta name="theme-color" content="#285c46">
+    <meta name="description" content="beepOS: a little operating system for my little corner of the internet. personal links, writing, quotes, and other assorted crap.">
+    <title>beepOS — beep8.xyz</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="style.css">
+    <script src="beepos.js" defer></script>
 </head>
 <body>
-    <p>hello, this is my website! right now it's a bit empty, and that's exactly how i like it!</p>
+    <main id="page-content" data-app="home" class="app-content home-content">
+        <header class="welcome-hero">
+            <svg class="welcome-computer" aria-hidden="true"><use href="assets/icons.svg#computer"></use></svg>
+            <div>
+                <p class="eyebrow">a little corner of the internet</p>
+                <h1>oh, hello there<span class="accent">.</span></h1>
+                <p>hello, this is my website! right now it's a bit empty, and that's exactly how i like it!</p>
+            </div>
+        </header>
 
-    <p>just a page for me and my crap. styling shamelessly stolen from <a href="https://chipmunk.land/">chipmunk.land</a>.</p>
+        <div class="home-intro">
+            <span class="tiny-led" aria-hidden="true"></span>
+            <p>just a page for me and my crap. styling shamelessly stolen from <a href="https://chipmunk.land/">chipmunk.land</a>.</p>
+        </div>
 
-    <p>relevant links:</p>
-    <ul>
-        <li><a href="./quotes.html">quotes</a></li>
-        <li><a href="./inactive.html">inactive (and formerly inactive) accounts</a> (and why)</li>
-    </ul>
+        <section class="home-files" aria-labelledby="relevant-title">
+            <h2 id="relevant-title" class="section-label">relevant links <span>/ a few things to open</span></h2>
+            <div class="file-grid">
+                <a class="file-card" href="quotes.html" data-open="quotes">
+                    <svg aria-hidden="true"><use href="assets/icons.svg#quotes"></use></svg>
+                    <span><strong>quotes.txt</strong><small>quotes, jokes &amp; questionable humour</small></span>
+                    <span class="card-arrow" aria-hidden="true">↗</span>
+                </a>
+                <a class="file-card" href="inactive.html" data-open="inactive">
+                    <svg aria-hidden="true"><use href="assets/icons.svg#archive"></use></svg>
+                    <span><strong>account graveyard</strong><small>inactive (and formerly inactive) accounts (and why)</small></span>
+                    <span class="card-arrow" aria-hidden="true">↗</span>
+                </a>
+            </div>
+        </section>
 
-    <p>blogs and writing:</p>
-    <ul>
-        <li><a href="https://differentdance8.blogspot.com/">my new blog</a> (blogspot)</li>
-        <li><a href="https://smurfsabode.wordpress.com/">my old blog</a> (wordpress)</li>
-        <li><a href="https://www.wattpad.com/user/SomeoneReturns">wattpad</a> (@SomeoneReturns; maybe making a comeback)</li>
-    </ul>
+        <div class="link-columns">
+            <section>
+                <h2><svg aria-hidden="true"><use href="assets/icons.svg#writing"></use></svg> blogs and writing</h2>
+                <ul class="link-list">
+                    <li><a href="https://differentdance8.blogspot.com/">my new blog <span aria-hidden="true">↗</span></a><small>blogspot</small></li>
+                    <li><a href="https://smurfsabode.wordpress.com/">my old blog <span aria-hidden="true">↗</span></a><small>wordpress</small></li>
+                    <li><a href="https://www.wattpad.com/user/SomeoneReturns">wattpad <span aria-hidden="true">↗</span></a><small>@SomeoneReturns<br>maybe making a comeback</small></li>
+                </ul>
+            </section>
+            <section>
+                <h2><svg aria-hidden="true"><use href="assets/icons.svg#socials"></use></svg> socials</h2>
+                <ul class="link-list">
+                    <li><a href="https://www.youtube.com/@Olflix">youtube <span aria-hidden="true">↗</span></a><small>@Olflix</small></li>
+                    <li><a href="https://x.com/DifferentDance8">twitter / x <span aria-hidden="true">↗</span></a><small>@DifferentDance8</small></li>
+                    <li><span class="link-name">discord</span><small class="selectable">yet_another_account123</small></li>
+                </ul>
+            </section>
+            <section>
+                <h2><svg aria-hidden="true"><use href="assets/icons.svg#globe"></use></svg> other places</h2>
+                <ul class="link-list">
+                    <li><a href="https://github.com/UniqueName54321">github <span aria-hidden="true">↗</span></a><small>UniqueName54321</small></li>
+                    <li><a href="https://steamcommunity.com/profiles/76561199063133487">steam <span aria-hidden="true">↗</span></a><small>AltF4ForWeatherUpdates</small></li>
+                    <li><span class="link-name">osu!</span><small>DifferentDance8</small></li>
+                </ul>
+            </section>
+        </div>
 
-    <p>socials:</p>
-    <ul>
-        <li><a href="https://www.youtube.com/@Olflix">youtube</a> (@Olflix)</li>
-        <li><a href="https://x.com/DifferentDance8">twitter / x</a> (@DifferentDance8)</li>
-        <li>discord: yet_another_account123</li>
-    </ul>
-
-    <p>other places you can find me:</p>
-    <ul>
-        <li><a href="https://github.com/UniqueName54321">github</a> (UniqueName54321)</li>
-        <li><a href="https://steamcommunity.com/profiles/76561199063133487">steam</a> (AltF4ForWeatherUpdates)</li>
-        <li>osu!: DifferentDance8</li>
-    </ul>
+        <footer class="welcome-footer"><span>personal website. personal operating system.</span><span>make yourself at home <span aria-hidden="true">:)</span></span></footer>
+    </main>
 </body>
 </html>

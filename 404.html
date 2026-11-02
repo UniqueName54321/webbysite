@@ -4,10 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>beep8.xyz</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#285c46">
+    <title>file not found — beepOS</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/style.css">
+    <script src="/beepos.js" defer></script>
 </head>
 <body>
-    <p>holy crap user i can't believe you requested a page that doesn't exist</p>
+    <main id="page-content" data-app="notfound" class="app-content document-content error-content">
+        <svg class="error-icon" aria-hidden="true"><use href="/assets/icons.svg#offline"></use></svg>
+        <p class="eyebrow">error 404 / file not found</p>
+        <h1>well, this is awkward.</h1>
+        <p>holy crap user i can't believe you requested a page that doesn't exist</p>
+        <p>the requested file is missing from this extremely legitimate operating system.</p>
+        <a class="retro-button" href="/index.html" data-open="home">return to desktop</a>
+    </main>
 </body>
 </html>

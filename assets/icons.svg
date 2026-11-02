@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#263d32" stroke-width="1.5" stroke-linejoin="miter" shape-rendering="crispEdges">
+  <symbol id="computer" viewBox="0 0 32 32">
+    <path fill="#a8bca3" d="M3 3h26v20H3z"/><path fill="#edeee0" d="M3 3h26v3H6v17H3z"/>
+    <path fill="#245a43" d="M7 7h18v12H7z"/><path stroke="#bceaa2" d="M11 10v4m10-4v4m-8 2h6"/>
+    <path fill="#cbd3ba" d="M12 23h8v4h6v3H6v-3h6z"/>
+  </symbol>
+  <symbol id="folder" viewBox="0 0 32 32">
+    <path fill="#d5aa50" d="M2 7h11l3 3h14v18H2z"/><path fill="#fae6a1" d="M2 13h28l-3 15H2z"/>
+    <path stroke="#fff5cb" d="M4 16h22"/><path stroke="#ae823b" d="M7 25h17"/>
+  </symbol>
+  <symbol id="quotes" viewBox="0 0 32 32">
+    <path fill="#f8f3d9" d="M6 2h15l6 6v22H6z"/><path fill="#c4cdb2" d="M21 2v7h6"/>
+    <path fill="#478363" stroke="none" d="M10 12h5v6h-2l-2 3h-2l2-4h-1zm9 0h5v6h-2l-2 3h-2l2-4h-1z"/>
+    <path stroke="#aaa994" d="M10 25h13"/>
+  </symbol>
+  <symbol id="archive" viewBox="0 0 32 32">
+    <path fill="#c4cdb2" d="M4 6h24v24H4z"/><path fill="#eceddb" d="M3 3h26v7H3z"/>
+    <path fill="#90a88a" d="M8 14h16v10H8z"/><path fill="#f5f0d5" d="M12 14h8v4h-8z"/>
+  </symbol>
+  <symbol id="globe" viewBox="0 0 32 32">
+    <path fill="#89bcb6" d="M10 2h12v3h5v5h3v12h-3v5h-5v3H10v-3H5v-5H2V10h3V5h5z"/>
+    <path fill="#c7e2a1" stroke="none" d="M9 5h8v4h-4v5H5v-4h4zm10 8h8v8h-4v6h-5v-7h-4v-5h5z"/>
+    <path stroke="#e1f0cf" d="M10 5h8"/>
+  </symbol>
+  <symbol id="terminal" viewBox="0 0 32 32">
+    <path fill="#c1cab3" d="M2 4h28v25H2z"/><path fill="#203c30" d="M5 9h22v17H5z"/>
+    <path stroke="#b3e1a0" stroke-width="2" d="m9 13 4 4-4 4m7 0h6"/><path stroke="#f3f0dc" d="M4 6h23"/>
+  </symbol>
+  <symbol id="settings" viewBox="0 0 32 32">
+    <path fill="#c6ceb7" d="M12 2h8v5h5v5h5v8h-5v5h-5v5h-8v-5H7v-5H2v-8h5V7h5z"/>
+    <path fill="#628b6d" d="M12 11h8v10h-8z"/><path stroke="#eff3dc" d="M13 12h6v7"/>
+  </symbol>
+  <symbol id="note" viewBox="0 0 32 32">
+    <path fill="#f5d887" d="M4 3h24v21l-6 6H4z"/><path fill="#d6b361" d="M22 24h6l-6 6z"/>
+    <path stroke="#a68c4c" d="M9 10h14M9 15h14M9 20h9"/>
+  </symbol>
+  <symbol id="beep" viewBox="0 0 32 32">
+    <path fill="#b6e495" d="M6 3h20v4h4v19h-4v3H6v-3H2V7h4z"/>
+    <path stroke-width="3" d="M10 10v6m12-6v6m-11 6h10"/>
+    <path stroke="#f0ffd5" d="M7 6h17"/>
+  </symbol>
+  <symbol id="writing" viewBox="0 0 32 32">
+    <path fill="#dce3cb" d="M4 5h22v25H4z"/><path stroke="#a0b196" d="M8 12h12M8 17h10M8 22h8"/>
+    <path fill="#e6b755" d="m14 20 3-8L27 2l4 4-10 10z"/><path fill="#f8edcc" d="m14 20 3-8 4 4z"/>
+  </symbol>
+  <symbol id="socials" viewBox="0 0 32 32">
+    <path fill="#95c299" d="M2 3h24v18H13l-7 6v-6H2z"/><path fill="#e6edd1" d="M12 12h18v15h-4v4l-5-4h-9z"/>
+    <path stroke="#4d7658" d="M16 18h10m-10 4h7"/>
+  </symbol>
+  <symbol id="link" viewBox="0 0 16 16">
+    <path stroke="currentColor" d="M9 3h4v4m0-4L6 10M6 4H3v9h9v-3"/>
+  </symbol>
+  <symbol id="sound" viewBox="0 0 16 16">
+    <path fill="currentColor" stroke="none" d="M2 6h3l4-4v12l-4-4H2z"/><path stroke="currentColor" d="M11 5v6m2-8v10"/>
+  </symbol>
+  <symbol id="offline" viewBox="0 0 32 32">
+    <path fill="#e8b36c" d="M13 3h6l13 24H0z"/><path stroke-width="3" d="M16 10v8m0 3v3"/>
+  </symbol>
+</svg>
