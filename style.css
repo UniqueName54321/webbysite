@@ -331,3 +331,12 @@ body > .app-content { max-width: 680px; margin: var(--space-4) auto; box-shadow:
 /* The desktop manual is a plain text document, like a tiny Notepad file. */
 .readme-content { padding: var(--space-2); }
 .readme-content pre { margin: 0; padding: 0; border: 0; box-shadow: none; background: transparent; color: var(--ink); font: var(--font-code); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Desktop context actions share the app-menu bevel and item rules. */
+.desktop-context-menu { position: fixed; z-index: 1300; max-width: calc(100vw - 8px); }
+.desktop-context-menu button { white-space: normal; }
+.properties-content { min-height: 100%; background: var(--chrome); padding: var(--space-3); }
+.properties-content > svg { float: left; margin-right: var(--space-3); }
+.properties-content h1 { font: var(--font-heading); margin: 0 0 var(--space-3); }
+.properties-content .about-specs { padding-top: var(--space-3); }
+@media print { .desktop-context-menu { display: none; } }

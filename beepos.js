@@ -30,7 +30,9 @@
     "We searched everywhere except the place it actually is. You're welcome."
   ];
   let lastFindError = -1;
+  let propertiesTarget = "home";
   const apps = {
+    properties: { name: "Properties", label: "Properties", icon: "settings", path: "system\\properties.exe", width: 360, height: 290, status: "desktop shortcut properties" },
     find: { name: "Find", label: "Find", icon: "offline", path: "system\\find.exe", width: 380, height: 210, status: "search failed successfully" },
     readme: { name: "README.md", label: "README.md", icon: "quotes", file: "desktop/README.md", path: "desktop\\README.md", width: 600, height: 460, status: "README.md · read-only · deliberately unhelpful" },
     home: { name: "welcome.exe", label: "Welcome", icon: "computer", file: "index.html", path: "welcome.exe", width: 640, height: 512, status: "welcome to your little corner of the internet" },
@@ -152,6 +154,76 @@
   document.body.prepend(skipLink, desktop, startMenu, taskbar, toast, announcements);
   document.body.classList.add("os-running");
   document.title = initialApp === "home" ? "beepOS — beep8.xyz" : `${apps[initialApp].name} — beepOS`;
+
+  // Only desktop surfaces belong to this menu. App contextmenu events pass through.
+  const contextMenu = document.createElement("div");
+  contextMenu.className = "menu-popup desktop-context-menu";
+  contextMenu.setAttribute("role", "menu");
+  contextMenu.hidden = true;
+  document.body.append(contextMenu);
+  let contextTarget = desktop;
+  let contextApp = null;
+
+  function closeContextMenu(restoreFocus = false) {
+    if (contextMenu.hidden) return;
+    contextMenu.hidden = true;
+    if (restoreFocus && contextTarget.isConnected) contextTarget.focus({ preventScroll: true });
+  }
+
+  function showContextMenu(target, x, y) {
+    if (target.closest(".os-window")) return;
+    const shortcut = target.closest(".shortcut");
+    contextTarget = shortcut || desktop;
+    contextApp = shortcut?.dataset.open || null;
+    closeStart();
+    for (const menu of document.querySelectorAll(".app-menu[open]")) menu.open = false;
+    contextMenu.setAttribute("aria-label", contextApp ? `${apps[contextApp].label} context menu` : "Desktop context menu");
+    contextMenu.innerHTML = contextApp
+      ? '<button type="button" role="menuitem" data-context="open">Open</button><hr><button type="button" role="menuitem" data-context="properties">Properties</button>'
+      : '<button type="button" role="menuitem" data-context="nothing">Right-clicking nothing. Ambitious.</button>';
+    contextMenu.hidden = false;
+    contextMenu.style.left = `${Math.max(4, Math.min(x, innerWidth - contextMenu.offsetWidth - 4))}px`;
+    contextMenu.style.top = `${Math.max(4, Math.min(y, innerHeight - contextMenu.offsetHeight - 4))}px`;
+    contextMenu.querySelector("button").focus({ preventScroll: true });
+  }
+
+  desktop.addEventListener("contextmenu", (event) => {
+    if (event.defaultPrevented || event.target.closest(".os-window")) return;
+    event.preventDefault();
+    const bounds = event.target.closest(".shortcut")?.getBoundingClientRect();
+    const keyboard = event.clientX === 0 && event.clientY === 0;
+    showContextMenu(event.target, keyboard ? bounds?.left || 8 : event.clientX, keyboard ? bounds?.bottom || 8 : event.clientY);
+  });
+  desktop.addEventListener("keydown", (event) => {
+    if (event.target.closest(".os-window")) return;
+    if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+      event.preventDefault();
+      const bounds = event.target.getBoundingClientRect();
+      showContextMenu(event.target, bounds.left + 8, event.target === desktop ? 8 : bounds.bottom);
+    }
+  });
+  contextMenu.addEventListener("click", (event) => {
+    const action = event.target.closest("[data-context]")?.dataset.context;
+    if (!action) return;
+    const id = contextApp;
+    closeContextMenu(true);
+    if (action === "open") openApp(id);
+    if (action === "properties") { propertiesTarget = id; openApp("properties"); }
+    if (action === "nothing") notify("You right-clicked the wallpaper. It has no files, no ambitions, and now concerns about you.");
+  });
+  contextMenu.addEventListener("keydown", (event) => {
+    const items = [...contextMenu.querySelectorAll("button")];
+    const index = items.indexOf(document.activeElement);
+    if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items[next].focus();
+    }
+    if (event.key === "Escape" || event.key === "Tab") { closeContextMenu(true); if (event.key === "Escape") event.preventDefault(); }
+  });
+  document.addEventListener("pointerdown", (event) => { if (!contextMenu.contains(event.target)) closeContextMenu(); });
+  window.addEventListener("resize", () => closeContextMenu());
+  window.addEventListener("blur", () => closeContextMenu());
 
   function notify(message) {
     clearTimeout(toastTimeout);
@@ -393,7 +465,7 @@
           <button class="window-control close" type="button" data-action="close" aria-label="Close ${app.name}" title="Close window"></button>
         </div>
       </header>
-      ${!["note", "find"].includes(id) ? appMenuBar(id) : ""}
+      ${!["note", "find", "properties"].includes(id) ? appMenuBar(id) : ""}
       ${id === "computer" ? `<div class="address-bar"><span>Address</span><div class="address">${icon(app.icon)}C:\\beepOS\\${app.path}</div></div>` : ""}
       <div class="window-body" tabindex="-1"><div class="app-content"><p>opening file…</p></div></div>
       ${id !== "note" ? `<footer class="window-status"><span>${app.status}</span><span>beep8.xyz</span></footer>` : ""}`;
@@ -489,6 +561,8 @@
 
   function builtInContent(id) {
     switch (id) {
+      case "properties":
+        return { className: "app-content properties-content", html: `${icon("settings")}<h1 id="properties-name"></h1><dl class="about-specs"><div><dt>Type</dt><dd id="properties-type"></dd></div><div><dt>Location</dt><dd>Desktop</dd></div><div><dt>Target</dt><dd id="properties-target"></dd></div></dl><button class="retro-button" type="button" data-action="close">OK</button>` };
       case "find":
         return { className: "app-content error-content", html: `${icon("offline", "error-icon")}<p id="find-message"></p><button class="retro-button" type="button" data-action="close">OK</button>` };
       case "computer":
@@ -520,6 +594,14 @@
 
   function initContent(win) {
     const root = win.body;
+    if (win.id === "properties") {
+      const app = apps[propertiesTarget];
+      root.querySelector("#properties-name").textContent = app.label;
+      root.querySelector("#properties-type").textContent = app.file ? "Document shortcut" : "Application shortcut";
+      root.querySelector("#properties-target").textContent = app.file || `C:\\beepOS\\${app.path}`;
+      root.querySelector("svg use").setAttribute("href", `${asset("assets/icons.svg")}#${app.icon}`);
+      win.element.setAttribute("role", "dialog");
+    }
     if (win.id === "find") {
       const next = lastFindError < 0 ? Math.floor(Math.random() * findErrors.length) : (lastFindError + 1 + Math.floor(Math.random() * (findErrors.length - 1))) % findErrors.length;
       lastFindError = next;
@@ -546,7 +628,7 @@
   async function openApp(id, { focus = true, initial = false } = {}) {
     if (!Object.hasOwn(apps, id)) return;
     closeStart();
-    if (windows.has(id)) { if (id === "find") initContent(windows.get(id)); focusWindow(windows.get(id), !initial); return; }
+    if (windows.has(id)) { if (["find", "properties"].includes(id)) initContent(windows.get(id)); focusWindow(windows.get(id), !initial); return; }
     const win = makeWindow(id, focus);
     try {
       const content = builtInContent(id) || await loadTemplate(id);

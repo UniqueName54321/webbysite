@@ -35,6 +35,12 @@ The existing manager still owns dragging, resizing, focus, minimization, closing
 
 The taskbar uses `--taskbar-height` consistently with the desktop work area. Desktop icons flow down columns and wrap when height is limited. Branding adapts to the available space; system text and icons retain their crisp sizes. Phones keep one active app filling the work area with larger title controls and the same menus and file grid.
 
+## Desktop context menus
+
+The desktop handles `contextmenu` only outside `.os-window`. Background clicks get one joke action; desktop shortcuts get Open and Properties. Window events are left uncancelled for native browser behavior or app-owned handlers. Keep this boundary when adding future actions.
+
+The context popup reuses the shared menu styles, fits within the viewport, supports Shift+F10 / the context-menu key, arrow navigation and Escape, and dismisses on outside pointer actions, resize or blur. Properties uses the existing window manager and shows shortcut metadata without inventing disk sizes or modification dates.
+
 ## Browser checks
 
 `tests/browser.cjs` uses Playwright and a separately running local HTTP server. It covers content/links, app loading, all window actions, Nouveau detection, notes/preferences, keyboard controls, offline/error handling, no-JavaScript pages and layouts at 320, 390, 640, 768, 1024 and 1440px. It also checks shared window frames, upstream control glyphs, font loading, Explorer selection/opening/views/keyboard/touch, and reachable icons at 800×480, 1280×720 and 1920×1080.
