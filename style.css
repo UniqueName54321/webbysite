@@ -396,3 +396,20 @@ body > .app-content { max-width: 680px; margin: var(--space-4) auto; box-shadow:
 
 .commons-folder svg { width: var(--icon-small); height: var(--icon-small); margin-right: 6px; }
 .commons-items { align-items: start; }
+
+/* Media uses the same compact controls and inset surfaces as the desktop. */
+.media-viewer-content { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: 6px; }
+.media-tools { display: flex; flex-wrap: wrap; gap: 4px; }
+.media-tools button { min-width: 40px; }
+.media-status { margin: 0; }
+.media-stage { flex: 1; min-height: 100px; overflow: auto; background: #181818; box-shadow: var(--sunken); }
+.media-object { display: block; margin: auto; }
+.media-stage img { max-width: none; }
+.media-stage img.media-fit { width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+.media-stage video { max-width: 100%; max-height: 100%; }
+.media-stage audio { width: 100%; }
+.media-info { overflow-wrap: anywhere; }
+.media-info p { margin: 4px 0; }
+.commons-image-card { min-width: 0; }
+.commons-image img { width: 100%; }
+.commons-image .preview-state:not(:empty) { min-height: 20px; }

@@ -20,6 +20,8 @@ Open `http://localhost:8765`. Use an HTTP server rather than opening the HTML fi
 - `nouveau/nouveautest.html` — NouveauBrowser API detection and its recheck button.
 - `404.html` — the missing-file app. Assets use root paths so nested missing URLs work on Cloudflare Pages.
 - `window-effects.js` — reversible per-window item physics and collision response.
+- `media-viewer.js`, `media-contract.js` — shared Commons/local media viewing and source descriptors.
+- `commons.js` — live category navigation and image previews.
 - `filesystem.js` — versioned IndexedDB disk, transaction-safe writes and text/folder operations.
 - `beepos.js` — desktop, app loading, window management, taskbar, start menu, terminal, and preferences.
 - `style.css` — desktop and app styles, including mobile, print, and reduced-motion support.

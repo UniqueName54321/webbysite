@@ -1,5 +1,6 @@
+import { commonsMedia } from './media-contract.js';
 /* Commons categories form a graph, not a tree: parents are explicit links. */
-export function mountCommons(root) {
+export function mountCommons(root, { onOpen } = {}) {
   root.innerHTML = '<form class="address-bar"><label>Category <input name="category" value="Images" required></label><button>Go</button></form><div class="commons-nav"><button type="button" data-back>Back</button> <button type="button" data-home>Images</button></div><p role="status"></p><div class="commons-parents"></div><div class="commons-items"></div><button type="button" data-more hidden>Load more</button>';
   const form=root.querySelector('form'), input=form.elements.category, status=root.querySelector('[role=status]'), parents=root.querySelector('.commons-parents'), items=root.querySelector('.commons-items'), more=root.querySelector('[data-more]'), back=root.querySelector('[data-back]');
   let category='Category:Images', continuation=null, controller, sequence=0; const history=[];
@@ -26,12 +27,21 @@ export function mountCommons(root) {
       for(const entry of entries){
         if(entry.ns===14){folder(entry.title,items);continue;}
         const image=details[entry.pageid]?.imageinfo?.[0];if(!image||!image.mime?.startsWith('image/'))continue;
-        const safe=value=>{try{const u=new URL(value);return u.protocol==='https:'&&(u.hostname==='commons.wikimedia.org'||u.hostname==='upload.wikimedia.org')?u.href:null}catch{return null}};
-        const href=safe(image.descriptionurl);if(!href)continue;
-        const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';
-        const thumb=safe(image.thumburl);if(thumb){const img=document.createElement('img');img.src=thumb;img.alt=entry.title.replace(/^File:/,'');img.loading='lazy';link.append(img);}
-        const name=document.createElement('span');name.textContent=entry.title.replace(/^File:/,'');link.append(name);
-        const license=document.createElement('small');const plain=value=>String(value||'').replace(/<[^>]*>/g,'').trim();license.textContent='Creator: '+(plain(image.extmetadata?.Artist?.value)||'see Commons source')+' · '+(plain(image.extmetadata?.LicenseShortName?.value)||'see source for license');link.append(license);items.append(link);
+        const media=commonsMedia(entry,image);
+        const href=media.sourceUrl;if(!href)continue;
+        const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.className='commons-image';
+        const img=document.createElement('img');img.alt=media.title;img.loading='eager';img.decoding='async';link.append(img);
+        const previewState=document.createElement('small');previewState.className='preview-state';link.append(previewState);
+        let usedOriginal=false;
+        const preview=()=>{usedOriginal=false;img.hidden=false;previewState.textContent='Loading preview…';retryPreview.hidden=true;const url=media.previewUrl||media.url;if(url)img.src=url;else{img.hidden=true;previewState.textContent='Preview unavailable';retryPreview.hidden=false;}};
+        img.onload=()=>{previewState.textContent='';img.hidden=false;retryPreview.hidden=true};
+        img.onerror=()=>{if(!usedOriginal&&media.url&&img.src!==media.url){usedOriginal=true;img.src=media.url;return;}img.hidden=true;previewState.textContent='Preview unavailable';retryPreview.hidden=false;};
+        const name=document.createElement('span');name.textContent=media.title;link.append(name);
+        const license=document.createElement('small');license.textContent='Creator: '+(media.artist||'see Commons source')+' · '+(media.license||'see source for license');link.append(license);
+        link.onclick=event=>{if(event.button||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();if(onOpen)onOpen(media);else root.dispatchEvent(new CustomEvent('beepos:open-media',{bubbles:true,detail:media}));};
+        const card=document.createElement('div');card.className='commons-image-card';card.append(link);
+        const retryPreview=document.createElement('button');retryPreview.type='button';retryPreview.textContent='Retry preview';retryPreview.onclick=preview;card.append(retryPreview);items.append(card);preview();
+
       }
       continuation=members.continue||null;more.hidden=!continuation;more.textContent='Load more';
       status.textContent=items.children.length?'Live results from Wikimedia Commons. Open an image for source, creator and license.':'No images or subcategories here. Try a parent category or another category name.';

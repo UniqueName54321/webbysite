@@ -2,6 +2,10 @@
 
 ## 1.1 — the gravity update
 
+- Added Media Viewer for Commons images and temporary local images/audio/video, with fit/zoom, attribution and source links.
+- Every Commons image requests a preview, with original-image fallback and retry feedback.
+- Media NOTES.txt now includes category browsing protips; existing bundled notes upgrade safely.
+
 - Added `C:\Media` with a NOTES.txt introduction and a live Wikimedia Commons Images folder mount. Browse subcategories, multiple parents, paginated image results and creator/license source links.
 
 - Rotate windows from their Window menu, with a slider and 15-degree steps.
