@@ -14,6 +14,7 @@ export function seedDisk(apps) {
   const add = (id, parent, name, type, extra = {}) => nodes.push({ id, parent, name, type, locked: true, ...extra });
   add('root', null, 'C:', 'folder');
   add('os', 'root', 'beepOS', 'folder');
+  if(apps.commons){add('media','root','Media','folder');add('media-images','media','Images','folder',{mount:'commons'});add('media-notes','media','NOTES.txt','text',{content:'Media is a bit complicated if you do not know what you are looking for. Just have a look around :3\nImages browses live Wikimedia Commons categories. Categories can have several parents, so there is more than one way around. Internet required; open an image on Commons for its creator and license.'});}
   add('stuff', 'os', 'my stuff', 'folder');
   add('system', 'os', 'system', 'folder');
   add('logs', 'os', 'logs', 'folder');
@@ -104,6 +105,13 @@ export async function createFilesystem(apps) {
     });
   }
   try { db = await openDatabase(); await transaction(disk => {
+    // Add the Media mount without overwriting any existing file or folder.
+    if(apps.commons){
+      const seeds=seedDisk(apps).nodes.filter(n=>['media','media-images','media-notes'].includes(n.id));
+      const occupied=disk.nodes.find(n=>n.parent==='root'&&n.name.toLowerCase()==='media');
+      const parent=occupied?.type==='folder'?occupied.id:occupied?null:'media';
+      if(parent){for(const n of seeds){if(n.id==='media'&&occupied)continue;const candidate={...n,parent:n.id==='media'?'root':parent};if(!disk.nodes.some(v=>v.id===candidate.id||v.parent===candidate.parent&&v.name.toLowerCase()===candidate.name.toLowerCase()))disk.nodes.push(candidate);}}
+    }
     // Content-only migration: never reseed or modify user files on upgrade.
     const release = disk.nodes.find(n => n.id === 'release');
     if (release?.locked && release.type === 'text' && release.content === RELEASE_10) release.content = RELEASE_TEXT;
@@ -125,6 +133,7 @@ export async function createFilesystem(apps) {
   function path(id) { const parts = []; let n = node(id); while (n) { parts.unshift(n.name); n = node(n.parent); } return parts.join('\\') + (id === 'root' ? '\\' : ''); }
   function assertName(disk, parent, name, except) {
     if (!validName(name)) throw Error('Use a name of 1–120 characters without Windows reserved names, trailing dots or <>:"/\\|?*.');
+    if (disk.nodes.some(n => n.id === parent && n.mount)) throw Error('Remote media folders are read-only. Browse their categories in Images.');
     if (!disk.nodes.some(n => n.id === parent && n.type === 'folder')) throw Error('Folder no longer exists.');
     if (disk.nodes.some(n => n.parent === parent && n.id !== except && n.name.toLowerCase() === name.toLowerCase())) throw Error('That name already exists in this folder.');
   }

@@ -32,6 +32,7 @@
   let lastFindError = -1;
   let propertiesTarget = "home";
   const apps = {
+    commons: { name: "Images", label: "Images", icon: "folder", path: "Media\\Images", width: 680, height: 520, status: "Wikimedia Commons · live categories and images" },
     'file-dialog': { name: "New / Rename", label: "New / Rename", icon: "folder", path: "system\\files.exe", width: 350, height: 230, status: "choose a name" },
     properties: { name: "Properties", label: "Properties", icon: "settings", path: "system\\properties.exe", width: 360, height: 290, status: "desktop shortcut properties" },
     find: { name: "Find", label: "Find", icon: "offline", path: "system\\find.exe", width: 380, height: 210, status: "search failed successfully" },
@@ -326,6 +327,7 @@
   function closeWindow(win) {
     if (win.saving) { notify("Please wait for the save to finish."); return; }
     if (win.dirty && !window.confirm("This file has unsaved changes. Discard them and close?")) return;
+    win.cleanupCommons?.();
     win.cleanupContext?.();
     win.cleanupEffects?.();
     win.unsubscribe?.();
@@ -370,6 +372,7 @@
   }
 
   const appDescriptions = {
+    commons: 'Live Wikimedia Commons categories and images. Categories can have multiple parents; image links include source and license information.',
     home: 'The front door to Bug Hayes’s corner of the internet. Links, writing and assorted crap.',
     computer: 'A small file explorer for your persistent C: drive. Now with optional gravity.',
     quotes: 'A read-only collection of jokes. Quality control remains unavailable.',
@@ -518,6 +521,7 @@
   async function openDiskEntry(id) {
     const entry = filesystem.node(id);
     if (!entry) return;
+    if (entry.mount === 'commons') return openApp('commons');
     if (entry.type === 'app') {
       if (entry.app === 'computer' && entry.parent === 'stuff') { window.open('https://www.imdb.com/title/tt1375666/', '_blank', 'noopener,noreferrer'); return; }
       return openApp(entry.app);
@@ -706,6 +710,7 @@
     };
     win.navigate = (id, remember = true) => {
       if (filesystem.node(id)?.type !== 'folder') return;
+      if (filesystem.node(id).mount === 'commons') { address.value = filesystem.path(win.folder); openDiskEntry(id); return; }
       if (remember && id !== win.folder) history.push(win.folder);
       win.folder = id; selected = null; render();
       (grid.querySelector('.app-file') || win.body).focus({ preventScroll: true });
@@ -885,6 +890,7 @@
     if (aboutTargets.has(id)) return { className: 'app-content about-content app-about-content', html: `${icon('beep')}<h1></h1><p class="app-about-description"></p><dl class="about-specs"><div><dt>Version</dt><dd>beepOS 1.1</dd></div><div><dt>Lives at</dt><dd class="app-about-path"></dd></div></dl><button type="button" data-action="close">OK</button>` };
     if (editorFiles.has(id)) return { className: "app-content file-editor", html: '<div class="editor-tools"><button type="button" data-fs="save">Save</button><span>Ctrl+S to save</span></div><textarea spellcheck="false" maxlength="262144"></textarea>' };
     switch (id) {
+      case "commons": return { className: "app-content commons-content", html: "<p>Connecting to Wikimedia Commons…</p>" };
       case "file-dialog":
         return { className: "app-content file-dialog-content", html: '<form><label for="new-file-name">Name:</label><input id="new-file-name" name="filename" type="text" maxlength="120" required autocomplete="off"><p role="alert"></p><button type="submit">OK</button> <button type="button" data-action="close">Cancel</button></form>' };
       case "properties":
@@ -920,6 +926,7 @@
 
   function initContent(win) {
     const root = win.body;
+    if (win.id === 'commons') import(asset('commons.js')).then(({mountCommons})=>{if(windows.get(win.id)===win)win.cleanupCommons=mountCommons(root.querySelector('.commons-content'))}).catch(()=>{if(windows.get(win.id)===win)root.textContent='Could not load the Commons browser. Close and reopen to retry.'});
     if (aboutTargets.has(win.id)) {
       const target = aboutTargets.get(win.id), app = apps[target];
       root.querySelector('h1').textContent = app.name;

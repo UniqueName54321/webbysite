@@ -66,3 +66,5 @@ Pushing `main` triggers the connected Cloudflare Pages deployment.
 Current release: **beepOS 1.1**. See `CHANGELOG.md` for the 1.0 final release and 1.1 additions.
 
 Each app has its own Help > About and relevant menu commands. Window > Rotation / Enable item physics are per-window, session-only effects. Physics supports up to 64 direct items and scales bulky content to fit. Start > Reset window effects restores all windows, including on phones. Effects never change files or preferences.
+
+`C:\Media\Images` browses Wikimedia Commons live categories, including parent-category links and paginated images. It requires internet access; source pages carry attribution and licensing. Run `tests/commons.browser.cjs` with the same Playwright tooling for a deterministic API-fixture check.

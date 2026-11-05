@@ -2,6 +2,8 @@
 
 ## 1.1 — the gravity update
 
+- Added `C:\Media` with a NOTES.txt introduction and a live Wikimedia Commons Images folder mount. Browse subcategories, multiple parents, paginated image results and creator/license source links.
+
 - Rotate windows from their Window menu, with a slider and 15-degree steps.
 - Enable item physics independently per window: gravity, wall/item collisions and grab/throw interactions. Disabling it restores the original DOM, controls and editor drafts.
 - Added a Start-menu rescue action to reset every window’s rotation and physics.

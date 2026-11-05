@@ -383,3 +383,15 @@ body > .app-content { max-width: 680px; margin: var(--space-4) auto; box-shadow:
   .explorer-context-menu { display: none; }
 }
 .window-toolbar .menu-popup { max-height: min(300px, var(--menu-height, 240px)); overflow-y: auto; }
+.commons-content { min-height: 100%; }
+.commons-content .address-bar label { flex: 1; display: flex; gap: 6px; }
+.commons-content input { flex: 1; min-width: 0; width: 100%; }
+.commons-items { display: grid; grid-template-columns: repeat(auto-fill,minmax(130px,1fr)); gap: 8px; margin: 12px 0; }
+.commons-items a { display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow-wrap: anywhere; color: var(--ink); }
+.commons-items img { max-width: 100%; height: 100px; object-fit: contain; }
+.commons-items small { color: var(--muted); }
+.commons-folder { min-width: 0; min-height: 32px; text-align: left; overflow-wrap: anywhere; }
+.commons-parents { display: flex; flex-wrap: wrap; gap: 4px; }
+.commons-parents p { width: 100%; margin: 4px 0; }
+
+.commons-folder svg { width: var(--icon-small); height: var(--icon-small); margin-right: 6px; }
