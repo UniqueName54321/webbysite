@@ -395,3 +395,4 @@ body > .app-content { max-width: 680px; margin: var(--space-4) auto; box-shadow:
 .commons-parents p { width: 100%; margin: 4px 0; }
 
 .commons-folder svg { width: var(--icon-small); height: var(--icon-small); margin-right: 6px; }
+.commons-items { align-items: start; }
