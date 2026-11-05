@@ -2,6 +2,8 @@
 
 ## 1.1 — the gravity update
 
+- Hardened Images thumbnail loading with small metadata batches and complete API continuation handling. Image buttons always open Media Viewer, including keyboard, touch and modified clicks.
+
 - Added Media Viewer for Commons images and temporary local images/audio/video, with fit/zoom, attribution and source links.
 - Every Commons image requests a preview, with original-image fallback and retry feedback.
 - Media NOTES.txt now includes category browsing protips; existing bundled notes upgrade safely.

@@ -387,7 +387,7 @@ body > .app-content { max-width: 680px; margin: var(--space-4) auto; box-shadow:
 .commons-content .address-bar label { flex: 1; display: flex; gap: 6px; }
 .commons-content input { flex: 1; min-width: 0; width: 100%; }
 .commons-items { display: grid; grid-template-columns: repeat(auto-fill,minmax(130px,1fr)); gap: 8px; margin: 12px 0; }
-.commons-items a { display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow-wrap: anywhere; color: var(--ink); }
+.commons-items .commons-image { display: flex; flex-direction: column; gap: 4px; padding: 6px; overflow-wrap: anywhere; color: var(--ink); text-align: left; width: 100%; min-width: 0; }
 .commons-items img { max-width: 100%; height: 100px; object-fit: contain; }
 .commons-items small { color: var(--muted); }
 .commons-folder { min-width: 0; min-height: 32px; text-align: left; overflow-wrap: anywhere; }

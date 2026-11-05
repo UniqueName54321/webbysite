@@ -4,5 +4,5 @@ export function commonsURL(value) {
 }
 export const plainMetadata = value => String(value || '').replace(/<[^>]*>/g, '').trim();
 export function commonsMedia(entry, image) {
-  return { kind: 'commons', title: entry.title.replace(/^File:/,''), pageid: entry.pageid, mime: image.mime, url: commonsURL(image.url), previewUrl: commonsURL(image.thumburl), sourceUrl: commonsURL(image.descriptionurl), artist: plainMetadata(image.extmetadata?.Artist?.value), license: plainMetadata(image.extmetadata?.LicenseShortName?.value), width: image.width, height: image.height };
+  return { kind: 'commons', title: entry.title.replace(/^File:/,''), pageid: entry.pageid, mime: image.mime, url: commonsURL(image.url), previewUrl: commonsURL(image.thumburl), sourceUrl: commonsURL(image.descriptionurl) || 'https://commons.wikimedia.org/wiki/' + encodeURIComponent(entry.title.replace(/ /g, '_')), artist: plainMetadata(image.extmetadata?.Artist?.value), license: plainMetadata(image.extmetadata?.LicenseShortName?.value), width: image.width, height: image.height };
 }

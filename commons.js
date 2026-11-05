@@ -22,14 +22,23 @@ export function mountCommons(root, { onOpen } = {}) {
       if(ancestor){const label=document.createElement('p');label.textContent='Parent categories (there may be more than one):';parents.append(label);for(const page of ancestor.query?.pages||[])for(const parent of page.categories||[])folder(parent.title,parents);}
       const entries=members.query?.categorymembers||[];
       const files=entries.filter(n=>n.ns===6);let details={};
-      if(files.length){const images=await api({prop:'imageinfo',pageids:files.map(n=>n.pageid).join('|'),iiprop:'url|mime|extmetadata',iiurlwidth:'160'});details=Object.fromEntries((images.query?.pages||[]).map(n=>[n.pageid,n]));}
+      // Keep expensive metadata queries small and consume every continuation response.
+      for(let offset=0;offset<files.length;offset+=10){
+        const params={prop:'imageinfo',pageids:files.slice(offset,offset+10).map(n=>n.pageid).join('|'),iiprop:'url|mime|extmetadata',iiextmetadatafilter:'Artist|LicenseShortName',iiurlwidth:'160'};
+        let next={};
+        do{
+          const images=await api({...params,...next});
+          if(token!==sequence||!root.isConnected)return;
+          for(const page of images.query?.pages||[])if(page.imageinfo?.length)details[page.pageid]=page;
+          next=images.continue;
+        }while(next);
+      }
       if(token!==sequence||!root.isConnected)return;
       for(const entry of entries){
         if(entry.ns===14){folder(entry.title,items);continue;}
         const image=details[entry.pageid]?.imageinfo?.[0];if(!image||!image.mime?.startsWith('image/'))continue;
         const media=commonsMedia(entry,image);
-        const href=media.sourceUrl;if(!href)continue;
-        const link=document.createElement('a');link.href=href;link.target='_blank';link.rel='noopener noreferrer';link.className='commons-image';
+        const link=document.createElement('button');link.type='button';link.className='commons-image';link.title='Open '+media.title+' in Media Viewer';
         const img=document.createElement('img');img.alt=media.title;img.loading='eager';img.decoding='async';link.append(img);
         const previewState=document.createElement('small');previewState.className='preview-state';link.append(previewState);
         let usedOriginal=false;
@@ -38,13 +47,13 @@ export function mountCommons(root, { onOpen } = {}) {
         img.onerror=()=>{if(!usedOriginal&&media.url&&img.src!==media.url){usedOriginal=true;img.src=media.url;return;}img.hidden=true;previewState.textContent='Preview unavailable';retryPreview.hidden=false;};
         const name=document.createElement('span');name.textContent=media.title;link.append(name);
         const license=document.createElement('small');license.textContent='Creator: '+(media.artist||'see Commons source')+' · '+(media.license||'see source for license');link.append(license);
-        link.onclick=event=>{if(event.button||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;event.preventDefault();if(onOpen)onOpen(media);else root.dispatchEvent(new CustomEvent('beepos:open-media',{bubbles:true,detail:media}));};
+        link.onclick=event=>{event.preventDefault();if(onOpen)onOpen(media);else root.dispatchEvent(new CustomEvent('beepos:open-media',{bubbles:true,detail:media}));};
         const card=document.createElement('div');card.className='commons-image-card';card.append(link);
         const retryPreview=document.createElement('button');retryPreview.type='button';retryPreview.textContent='Retry preview';retryPreview.onclick=preview;card.append(retryPreview);items.append(card);preview();
 
       }
       continuation=members.continue||null;more.hidden=!continuation;more.textContent='Load more';
-      status.textContent=items.children.length?'Live results from Wikimedia Commons. Open an image for source, creator and license.':'No images or subcategories here. Try a parent category or another category name.';
+      status.textContent=items.children.length?'Live results from Wikimedia Commons. Open an image in Media Viewer. Source, creator and license are available there.':'No images or subcategories here. Try a parent category or another category name.';
     }catch(error){if(token===sequence&&error.name!=='AbortError'){status.textContent='Could not load Commons: '+error.message;more.hidden=false;more.textContent='Retry';}}
   }
   form.onsubmit=e=>{e.preventDefault();load(input.value.trim()||'Images')};
